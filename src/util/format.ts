@@ -1,6 +1,7 @@
-export function money(amount: number, currency: string): string {
+export function money(amount: number, currency: string, opts: { whole?: boolean } = {}): string {
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+    const digits = opts.whole ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : { maximumFractionDigits: 2 };
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, ...digits }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }

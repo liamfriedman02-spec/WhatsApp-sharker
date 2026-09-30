@@ -1,4 +1,7 @@
-import type { Assistant, AssistantAnswer } from "../ai/assistant.js";
+import type { Assistant, AssistantAnswer, CoachActions } from "../ai/assistant.js";
+import { formatAmount } from "../coach/goals.js";
+import type { CoachService, CoachView } from "../coach/service.js";
+import type { CoachIntensity } from "../coach/types.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
 import { getFaq, type FaqCategoryId, FAQ_CATEGORIES } from "../content/faq.js";
@@ -9,9 +12,23 @@ import { getTopic } from "../content/topics.js";
 import type { Logger } from "../logger.js";
 import type { BossProfile, SharkerPlatform } from "../platform/types.js";
 import type { BossState, Handoff, Store } from "../store/store.js";
+import { shortDate } from "../util/format.js";
 import { HOUR } from "../util/time.js";
 import { renderMessage } from "../whatsapp/consoleMessenger.js";
 import { LIMITS, type InboundMessage, type Messenger, type OutboundMessage } from "../whatsapp/types.js";
+import {
+  coachSessionMessage,
+  fallbackPosts,
+  goalProposalMessage,
+  goalSetMessage,
+  missionAlreadyDoneMessage,
+  missionDoneMessage,
+  missionMessage,
+  missionNotVerifiedMessage,
+  postsMessages,
+  progressMessage,
+  streakLine,
+} from "./coachViews.js";
 import { bossSummary, type SupportDesk } from "./handoff.js";
 import { isAffirmative, matchCommand, searchKnowledge } from "./intents.js";
 import {
@@ -24,7 +41,6 @@ import {
   helpMenu,
   learnMenu,
   mainMenu,
-  nextActionMessage,
   notABossMessage,
   settingsMenu,
   topicMessages,
@@ -37,6 +53,7 @@ export interface RouterDeps {
   messenger: Messenger;
   assistant: Assistant | null;
   supportDesk: SupportDesk;
+  coach: CoachService;
   config: Config;
   logger: Logger;
   now?: () => Date;
@@ -47,6 +64,7 @@ interface Turn {
   boss: BossProfile;
   state: BossState;
   ctx: ContentCtx;
+  coach: CoachView;
   outbox: { message: OutboundMessage; source: string }[];
 }
 
@@ -54,7 +72,8 @@ const AI_ANSWERS_PER_HOUR = 30;
 
 /**
  * Handles every inbound WhatsApp message: menus and button taps (deterministic, instant),
- * step-by-step guides, human handoff, and free text (Claude, with keyword search fallback).
+ * coaching (missions, goals, progress, posts), step-by-step guides, human handoff, and free
+ * text (the Claude coach, with keyword search fallback).
  */
 export class BotRouter {
   private readonly aiUsage = new Map<string, number[]>();
@@ -81,12 +100,11 @@ export class BotRouter {
     const state = await store.getState(boss.id, boss.phone);
     state.phone = boss.phone;
     state.lastInboundAt = now.toISOString();
-    const turn: Turn = {
-      boss,
-      state,
-      ctx: contentCtx(boss, { now, hubUrl: config.sharker.bossHubUrl, defaultTimezone: config.retention.defaultTimezone }),
-      outbox: [],
-    };
+    const ctx = contentCtx(boss, { now, hubUrl: config.sharker.bossHubUrl, defaultTimezone: config.retention.defaultTimezone });
+    // Loading the coach view also records today's stats snapshot for week-over-week insights.
+    const coach = await this.deps.coach.view(ctx);
+    ctx.coach = coach;
+    const turn: Turn = { boss, state, ctx, coach, outbox: [] };
 
     await store.logMessage(boss.id, "in", describeInbound(msg), "boss", now);
     try {
@@ -100,6 +118,7 @@ export class BotRouter {
         buttons: [BTN.menu, BTN.human],
       });
     }
+    state.updatedAt = now.toISOString();
     await store.saveState(state);
     await this.flush(turn);
   }
@@ -151,13 +170,19 @@ export class BotRouter {
       case "human":
         return this.askForHandoff(t);
       case "settings":
-        return this.push(t, settingsMenu(t.state));
+        return this.push(t, settingsMenu(t.state, t.coach.state.intensity));
       case "business":
         return this.push(t, businessSnapshot(t.ctx));
       case "agent":
         return this.pushAll(t, aiAgentMessages(t.ctx));
       case "learn":
         return this.push(t, learnMenu());
+      case "mission":
+        return this.showMission(t);
+      case "progress":
+        return this.showProgress(t);
+      case "post":
+        return this.writePosts(t);
       default:
         return this.answerFreeText(t, text);
     }
@@ -168,11 +193,18 @@ export class BotRouter {
     switch (kind) {
       case "menu":
         return this.onMenu(t, arg);
-      case "nba": {
-        const nba = nextBestAction(t.ctx);
-        if (nba.guide) return this.startGuide(t, nba.guide);
-        return this.push(t, nextActionMessage(t.ctx));
-      }
+      case "nba":
+        return this.showMission(t);
+      case "mission":
+        return this.onMission(t, arg);
+      case "goal":
+        return this.onGoal(t, arg);
+      case "coach":
+        return arg === "session" ? this.showCoachSession(t) : this.showProgress(t);
+      case "post":
+        return this.writePosts(t);
+      case "followup":
+        return this.onFollowUpReply(t, arg === "done");
       case "learn": {
         const topic = getTopic(arg ?? "");
         return topic ? this.pushAll(t, topicMessages(topic, t.ctx)) : this.push(t, learnMenu());
@@ -226,7 +258,7 @@ export class BotRouter {
       case "ai_agent":
         return this.pushAll(t, aiAgentMessages(t.ctx));
       case "settings":
-        return this.push(t, settingsMenu(t.state));
+        return this.push(t, settingsMenu(t.state, t.coach.state.intensity));
       default:
         return this.push(t, mainMenu(t.ctx));
     }
@@ -248,7 +280,16 @@ export class BotRouter {
     });
   }
 
-  private onSettings(t: Turn, setting: string, value: string | undefined): void {
+  private async onSettings(t: Turn, setting: string, value: string | undefined): Promise<void> {
+    if (setting === "coach" && (value === "light" || value === "standard" || value === "intense")) {
+      await this.deps.coach.setIntensity(t.boss.id, t.coach, value);
+      const text: Record<CoachIntensity, string> = {
+        intense: "🔥 *Push mode on!* Daily missions, check-ins and goals. Let's grow *" + t.boss.brandName + "* fast.",
+        standard: "💪 *Standard coaching.* Missions twice a week plus your weekly coaching session.",
+        light: "🌿 *Light touch.* Just your weekly coaching session — I'm here whenever you need me.",
+      };
+      return this.push(t, { kind: "buttons", body: text[value], buttons: [{ id: "mission:today", title: "🎯 Today's mission" }, BTN.menu] });
+    }
     if (setting === "digest" && (value === "daily" || value === "weekly" || value === "off")) {
       t.state.digest = value;
       const text =
@@ -261,7 +302,7 @@ export class BotRouter {
     }
     if (setting === "pause") return this.setOptOut(t, true);
     if (setting === "resume") return this.setOptOut(t, false);
-    return this.push(t, settingsMenu(t.state));
+    return this.push(t, settingsMenu(t.state, t.coach.state.intensity));
   }
 
   private setOptOut(t: Turn, optedOut: boolean): void {
@@ -336,9 +377,15 @@ export class BotRouter {
     return this.finishGuide(t, guide);
   }
 
-  private finishGuide(t: Turn, guide: Guide): void {
+  private async finishGuide(t: Turn, guide: Guide): Promise<void> {
     t.state.flow = null;
     this.deps.logger.info("guide completed", { bossId: t.boss.id, guide: guide.id });
+    // Finishing the guide for today's mission completes the mission too.
+    const m = t.coach.todayMission;
+    if (m && m.record.status === "open" && m.def.guide === guide.id) {
+      const r = await this.deps.coach.completeMission(t.ctx, t.coach, m);
+      if (r.status === "done") this.push(t, { kind: "text", text: `✅ Today's mission done too! +${r.points} points\n${streakLine(t.coach)}` });
+    }
     if (guide.next && !getGuide(guide.next)?.alreadyDone?.(t.boss)) {
       return this.push(t, {
         kind: "buttons",
@@ -361,6 +408,142 @@ export class BotRouter {
     });
   }
 
+  // ── Coaching ──────────────────────────────────────────────────────────────
+
+  private async showMission(t: Turn): Promise<void> {
+    const m = await this.deps.coach.ensureTodayMission(t.ctx, t.coach);
+    if (m.record.status === "done") return this.push(t, missionAlreadyDoneMessage(t.coach));
+    if (m.record.status === "skipped") {
+      const next = await this.deps.coach.bonusMission(t.ctx, t.coach);
+      return this.push(t, missionMessage(t.ctx, next.def, t.coach));
+    }
+    return this.push(t, missionMessage(t.ctx, m.def, t.coach));
+  }
+
+  private async onMission(t: Turn, action: string | undefined): Promise<void> {
+    const coach = this.deps.coach;
+    switch (action) {
+      case "done": {
+        const m = await coach.ensureTodayMission(t.ctx, t.coach);
+        if (m.record.status === "done") return this.push(t, missionAlreadyDoneMessage(t.coach));
+        const r = await coach.completeMission(t.ctx, t.coach, m);
+        if (r.status === "not_verified") return this.push(t, missionNotVerifiedMessage(m.def));
+        this.deps.logger.info("mission completed", { bossId: t.boss.id, mission: m.def.id, streak: r.streak });
+        this.push(t, missionDoneMessage(r, t.coach));
+        return this.celebrateGoalIfReached(t);
+      }
+      case "skip": {
+        const m = t.coach.todayMission;
+        if (m && m.record.status === "open") await coach.skipMission(t.boss.id, t.coach, m);
+        const next = await coach.bonusMission(t.ctx, t.coach);
+        return this.push(t, missionMessage(t.ctx, next.def, t.coach, "🔄 *No problem — try this one instead*"));
+      }
+      case "bonus": {
+        const next = await coach.bonusMission(t.ctx, t.coach);
+        return this.push(t, missionMessage(t.ctx, next.def, t.coach, "🎯 *Bonus mission*"));
+      }
+      case "help": {
+        const m = await coach.ensureTodayMission(t.ctx, t.coach);
+        if (m.def.guide) return this.startGuide(t, m.def.guide);
+        if (this.deps.assistant && this.deps.config.ai.enabled) {
+          return this.answerFreeText(t, `Help me do today's mission step by step: ${m.def.task}`);
+        }
+        return this.push(t, {
+          kind: "buttons",
+          body: `🙋 *How to do it*\n\n${m.def.task}\n\n💡 ${m.def.why}\n\nStart small — one message, one group, one post. You've got this! 💪`,
+          buttons: [{ id: "mission:done", title: "✅ Done" }, { id: "mission:skip", title: "🔄 Another one" }, BTN.human],
+        });
+      }
+      default:
+        return this.showMission(t);
+    }
+  }
+
+  private async onGoal(t: Turn, action: string | undefined): Promise<void> {
+    const coach = this.deps.coach;
+    switch (action) {
+      case "accept":
+        await coach.acceptPendingGoal(t.ctx, t.coach);
+        return this.push(t, goalSetMessage(t.ctx, t.coach));
+      case "higher":
+        return this.push(t, goalProposalMessage(t.ctx, await coach.adjustPendingGoal(t.ctx, t.coach, 1.5), t.coach, "📈 *Let's aim higher*"));
+      case "lower":
+        return this.push(t, goalProposalMessage(t.ctx, await coach.adjustPendingGoal(t.ctx, t.coach, 0.7), t.coach, "📉 *A smaller first step*"));
+      default:
+        return this.push(t, goalProposalMessage(t.ctx, await coach.proposeGoal(t.ctx, t.coach), t.coach));
+    }
+  }
+
+  private async showProgress(t: Turn): Promise<void> {
+    await this.celebrateGoalIfReached(t);
+    return this.push(t, progressMessage(t.ctx, t.coach));
+  }
+
+  private async showCoachSession(t: Turn): Promise<void> {
+    const m = await this.deps.coach.ensureTodayMission(t.ctx, t.coach);
+    return this.push(t, coachSessionMessage(t.ctx, t.coach, m.def));
+  }
+
+  /** Celebrates in the conversation when the goal was reached (and stops the proactive one). */
+  private async celebrateGoalIfReached(t: Turn): Promise<void> {
+    const goal = t.coach.state.goal;
+    if (goal?.status !== "active" || t.coach.goal?.status !== "achieved") return;
+    await this.deps.coach.markGoalAchieved(t.boss.id, t.coach, t.ctx.now);
+    this.push(t, {
+      kind: "buttons",
+      body: `🏆 *Goal reached, ${t.boss.firstName}!*\n\n*${t.boss.brandName}* hit ${formatAmount(goal.metric, goal.target, t.boss.stats.currency)}. That's your business growing because you pushed it.\n\nReady for a bigger one?`,
+      buttons: [{ id: "goal:new", title: "🎯 New goal" }, BTN.menu],
+    });
+  }
+
+  private async writePosts(t: Turn, request?: string): Promise<void> {
+    const { assistant, config } = this.deps;
+    let posts: string[] | null = null;
+    if (assistant && config.ai.enabled && this.allowAi(t.boss.id)) posts = await assistant.writePosts({ ctx: t.ctx, request });
+    return this.pushAll(t, postsMessages(t.ctx, posts ?? fallbackPosts(t.ctx)));
+  }
+
+  private onFollowUpReply(t: Turn, done: boolean): void {
+    if (done) {
+      return this.push(t, {
+        kind: "buttons",
+        body: `🙌 Love it, ${t.boss.firstName}! That's exactly how *${t.boss.brandName}* grows.\n\n${streakLine(t.coach)}\n\nWhat's next?`,
+        buttons: [{ id: "mission:today", title: "🎯 Today's mission" }, { id: "coach:progress", title: "🏆 My progress" }, BTN.menu],
+      });
+    }
+    return this.push(t, {
+      kind: "buttons",
+      body: "No stress. What's getting in the way? Tell me in a few words and we'll make it easier — or let me write the post for you.",
+      buttons: [{ id: "post:write", title: "✍️ Write me a post" }, { id: "mission:today", title: "🎯 Today's mission" }, BTN.menu],
+    });
+  }
+
+  /** Applies what the AI coach decided (goal, memory, follow-up, mission) and confirms it. */
+  private async applyActions(t: Turn, actions: CoachActions): Promise<void> {
+    const coach = this.deps.coach;
+    const now = t.ctx.now;
+    const confirmations: string[] = [];
+    if (actions.remember.length > 0) await coach.remember(t.boss.id, t.coach, actions.remember, now);
+    if (actions.setGoal) {
+      const g = await coach.setGoal(t.ctx, t.coach, actions.setGoal.metric, actions.setGoal.target, actions.setGoal.days);
+      const deadline = shortDate(g.deadline, t.ctx.timezone).replace(/, \d{4}$/, "");
+      confirmations.push(`🎯 Goal saved: *${formatAmount(g.metric, g.target, t.boss.stats.currency)} by ${deadline}*. I'll track it for you.`);
+    }
+    if (actions.missionDone) {
+      const m = t.coach.todayMission;
+      if (m && m.record.status === "open") {
+        const r = await coach.completeMission(t.ctx, t.coach, m);
+        if (r.status === "done") confirmations.push(`✅ Mission done: +${r.points} points · 🔥 ${r.streak} in a row`);
+      }
+    }
+    if (actions.followUp) {
+      const f = await coach.scheduleFollowUp(t.boss.id, t.coach, actions.followUp.hours, actions.followUp.reason, now);
+      const when = actions.followUp.hours <= 12 ? "later today" : actions.followUp.hours <= 36 ? "tomorrow" : `on ${shortDate(f.dueAt, t.ctx.timezone).replace(/, \d{4}$/, "")}`;
+      confirmations.push(`⏰ I'll check in with you ${when}.`);
+    }
+    if (confirmations.length > 0) this.push(t, { kind: "text", text: confirmations.join("\n") });
+  }
+
   // ── Free text ─────────────────────────────────────────────────────────────
 
   private async answerFreeText(t: Turn, text: string): Promise<void> {
@@ -368,7 +551,10 @@ export class BotRouter {
     if (assistant && this.deps.config.ai.enabled && this.allowAi(t.boss.id)) {
       const history = (await store.recentMessages(t.boss.id, 13)).slice(0, -1); // drop the message being answered
       const answer = await assistant.answer({ ctx: t.ctx, question: text, history, flow: t.state.flow });
-      if (answer) return this.pushAnswer(t, answer);
+      if (answer) {
+        this.pushAnswer(t, answer);
+        return this.applyActions(t, answer.actions);
+      }
     }
 
     const match = searchKnowledge(text);
@@ -511,7 +697,8 @@ export class BotRouter {
     const state = await store.getState(handoff.bossId, handoff.phone);
     state.mode = "human";
     state.handoffId = handoff.id;
-    await store.saveState(state); // refreshes updatedAt → keeps the handoff alive
+    state.updatedAt = this.now().toISOString(); // keeps the handoff alive
+    await store.saveState(state);
     return handoff;
   }
 
@@ -524,6 +711,7 @@ export class BotRouter {
     if (state.handoffId === handoffId) {
       state.mode = "bot";
       state.handoffId = null;
+      state.updatedAt = this.now().toISOString();
       await store.saveState(state);
     }
     const body = `✅ Your support request *#${handoffId}* is closed. Anything else? Reply *MENU* anytime.`;

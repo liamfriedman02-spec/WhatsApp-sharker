@@ -1,3 +1,4 @@
+import type { CoachView } from "../coach/service.js";
 import { agentStage, type AgentStage, type BossProfile } from "../platform/types.js";
 
 /** Everything content needs to personalize a message. */
@@ -7,6 +8,8 @@ export interface ContentCtx {
   now: Date;
   hubUrl: string;
   timezone: string;
+  /** The coach's view (insights, goal, level, mission) when it has been loaded. */
+  coach?: CoachView;
 }
 
 export function contentCtx(boss: BossProfile, opts: { now?: Date; hubUrl: string; defaultTimezone: string }): ContentCtx {

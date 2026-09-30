@@ -28,6 +28,7 @@ The list endpoint can return only Bosses with `whatsappOptIn: true`; the bot als
   "phone": "5511999998888",
   "firstName": "Carla",
   "brandName": "Carla Kingdom",
+  "brandUrl": "https://carlakingdom.example/join",
   "timezone": "America/Sao_Paulo",
   "whatsappOptIn": true,
   "brandLaunchedAt": "2026-07-30T14:00:00Z",
@@ -58,10 +59,11 @@ The list endpoint can return only Bosses with `whatsappOptIn: true`; the bot als
 
 | Field | Why the bot needs it |
 |---|---|
+| `brandUrl` (optional) | Put into the ready-to-post texts the coach writes. |
 | `whatsappOptIn` | WhatsApp policy: proactive messages only to Bosses who agreed (collect it in Boss Hub onboarding). |
 | `brandLaunchedAt` | Welcome message, "no players after launch", journey stage. |
 | `lastActiveAt` | Last Boss Hub session → inactive-Boss reminders. |
-| `stats.*` | Personalized answers, milestones, daily/weekly summaries. "Today" and "7d" are in the Boss's timezone. |
+| `stats.*` | Personalized answers, milestones, summaries and coaching. "Today" and "7d" are in the Boss's timezone. The bot stores a daily snapshot of these to compute week-over-week trends, levels and goal progress. |
 | `aiAgent.activated` + `connectedSocials` | **AI Agent stage**: `not_activated` → `needs_socials` → `live`. Drives every Agent message and CTA. |
 | `aiAgent.posts*` / `lastPost*` | "Your AI Agent just published its first post", activity in summaries. |
 | `payouts.methodConfigured` | Pushes payout setup after first earnings. |

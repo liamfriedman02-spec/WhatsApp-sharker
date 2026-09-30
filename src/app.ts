@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ClaudeAssistant, type Assistant } from "./ai/assistant.js";
 import { LogSupportDesk, WebhookSupportDesk, type SupportDesk } from "./bot/handoff.js";
+import { CoachService } from "./coach/service.js";
 import { BotRouter } from "./bot/router.js";
 import type { Config } from "./config.js";
 import type { Logger } from "./logger.js";
@@ -21,6 +22,7 @@ export interface App {
   messenger: Messenger;
   assistant: Assistant | null;
   supportDesk: SupportDesk;
+  coach: CoachService;
   router: BotRouter;
   retention: RetentionEngine;
 }
@@ -74,8 +76,9 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
     overrides.supportDesk ??
     (config.support.webhookUrl ? new WebhookSupportDesk(config.support.webhookUrl, logger) : new LogSupportDesk(logger));
 
-  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, config, logger, now: overrides.now });
-  const retention = new RetentionEngine({ platform, store, messenger, config, logger, now: overrides.now });
+  const coach = new CoachService({ store, platform, logger });
+  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, now: overrides.now });
+  const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, now: overrides.now });
 
-  return { config, logger, platform, store, messenger, assistant, supportDesk, router, retention };
+  return { config, logger, platform, store, messenger, assistant, supportDesk, coach, router, retention };
 }

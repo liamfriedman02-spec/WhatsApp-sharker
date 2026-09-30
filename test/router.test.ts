@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Assistant, AssistantAnswer } from "../src/ai/assistant.js";
+import { NO_ACTIONS, type Assistant, type AssistantAnswer } from "../src/ai/assistant.js";
 import type { LogSupportDesk } from "../src/bot/handoff.js";
 import { HUB, PHONES, harness, ids, textOf } from "./helpers.js";
 
-const answer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "ok", cta: null, guide: null, escalate: false, ...a });
+const answer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "ok", cta: null, guide: null, escalate: false, actions: NO_ACTIONS, ...a });
 
 describe("conversation basics", () => {
   it("tells unknown numbers they aren't linked to a Boss account", async () => {
@@ -20,7 +20,9 @@ describe("conversation basics", () => {
     expect(textOf(menu)).toContain("Hi Ana!");
     expect(textOf(menu)).toContain("*Ana Arena*");
     expect(textOf(menu)).toContain("activate your AI Marketing Agent");
-    expect(ids(menu)).toEqual(expect.arrayContaining(["nba", "menu:business", "menu:ai_agent", "menu:learn", "menu:help", "handoff:start"]));
+    expect(ids(menu)).toEqual(
+      expect.arrayContaining(["mission:today", "coach:progress", "menu:business", "menu:ai_agent", "post:write", "menu:learn", "menu:help", "handoff:start"]),
+    );
   });
 
   it("ignores duplicate webhook deliveries", async () => {
@@ -232,7 +234,7 @@ describe("preferences", () => {
 });
 
 describe("AI assistant", () => {
-  const stub = (impl: Assistant["answer"]): Assistant => ({ answer: vi.fn(impl) });
+  const stub = (impl: Assistant["answer"]): Assistant => ({ answer: vi.fn(impl), writePosts: vi.fn(async () => null) });
 
   it("sends the answer with the Boss Hub button it picked", async () => {
     const assistant = stub(async () => answer({ reply: "Activate your Agent and it posts for you!", cta: "agent_activate" }));

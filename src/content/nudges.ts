@@ -12,10 +12,13 @@
  *
  * ⚠️ Every template must be submitted to and approved by Meta before it can be sent.
  */
+import { goalStatusLine, describeProposal, formatAmount } from "../coach/goals.js";
+import { formatChange } from "../coach/insights.js";
+import { lowerFirst, plannedMission, plannedProposal } from "../coach/plan.js";
 import { money, num, plural, networkName } from "../util/format.js";
 import type { ContentCtx } from "./context.js";
+import { levelName, nextLevelNeeds } from "./levels.js";
 import type { CtaId } from "./links.js";
-import { nextBestAction } from "./nextBestAction.js";
 
 export type TemplateCategory = "MARKETING" | "UTILITY";
 
@@ -33,8 +36,12 @@ export interface NudgeTemplate {
   params: (ctx: ContentCtx) => string[];
   /** Sample values for Meta's template review. */
   example: string[];
-  /** URL button → Boss Hub deep link (button index 0). */
+  /** URL button → Boss Hub deep link (button index 0). Its label is fixed in the template. */
   cta?: CtaId;
+  /** Page the URL button opens when it depends on the Boss (template keeps `cta`'s label). */
+  ctaFor?: (ctx: ContentCtx) => CtaId;
+  /** In-session: one buttons message with the link inline, so quick replies (e.g. ✅ Done) stay. */
+  sessionLinkInline?: boolean;
   /** Quick-reply buttons (after the URL button). */
   quickReplies?: QuickReply[];
   footer?: string;
@@ -307,26 +314,149 @@ export const NUDGES = {
     example: ["Carla Kingdom", "4", "$96.40", "3 posts this week"],
     cta: "dashboard",
   },
-  weekly_summary: {
-    name: "boss_weekly_summary",
+  weekly_coaching: {
+    name: "boss_weekly_coaching",
     category: "UTILITY",
     body:
       "📈 *Your week on {{1}}*\n\n" +
-      "👥 New players: {{2}} (total {{3}})\n" +
-      "💰 Earnings: {{4}}\n" +
-      "🤖 Your AI Agent: {{5}}\n\n" +
-      "👉 Your next step: {{6}}.\n\n" +
-      "Open your dashboard for the full picture.",
-    params: (c) => [
-      brand(c),
-      num(c.boss.stats.newPlayers7d),
-      num(c.boss.stats.totalPlayers),
-      money(c.boss.stats.earnings7d, c.boss.stats.currency),
-      agentSummary(c),
-      nextBestAction(c).text,
-    ],
-    example: ["Carla Kingdom", "31", "248", "$612.30", "14 posts this week", "keep sharing your brand link"],
+      "👥 New players: {{2}} ({{3}})\n" +
+      "💰 Earnings: {{4}} ({{5}})\n" +
+      "🏆 Level: {{6}}\n" +
+      "🎯 Goal: {{7}}\n\n" +
+      "👉 This week's focus: {{8}}.\n\n" +
+      "Tap below for your full coaching session.",
+    params: (c) => {
+      const coach = c.coach!;
+      return [
+        brand(c),
+        num(c.boss.stats.newPlayers7d),
+        formatChange(coach.insights.newPlayers),
+        money(c.boss.stats.earnings7d, c.boss.stats.currency),
+        formatChange(coach.insights.earnings),
+        levelName(coach.level.current),
+        goalStatusLine(coach.goal?.goal.status === "active" ? coach.goal : null),
+        lowerFirst(plannedMission(c).title),
+      ];
+    },
+    example: ["Carla Kingdom", "31", "+24% vs last week", "$612.30", "+12% vs last week", "💎 Pro", "18/40 new players · on track ✅", "bring 5 players back"],
     cta: "dashboard",
+    quickReplies: [{ title: "📊 Full coaching", payload: "coach:session" }],
+  },
+
+  // ── Coaching ──────────────────────────────────────────────────────────────
+  daily_mission: {
+    name: "boss_daily_mission",
+    category: "MARKETING",
+    body:
+      "🎯 *Today's mission for {{1}}*\n\n" +
+      "{{2}}\n\n" +
+      "💡 {{3}}\n\n" +
+      "🔥 Streak: {{4}} · 🏅 {{5}} points\n\n" +
+      "Tap *Done* when you've finished it.",
+    params: (c) => {
+      const m = plannedMission(c);
+      const streak = c.coach!.state.streak;
+      return [brand(c), m.task, m.why, streak > 0 ? `${plural(streak, "mission", "missions")} in a row` : "start one today", num(c.coach!.state.points)];
+    },
+    example: ["Ana Arena", "Send your brand link to 3 WhatsApp groups where people know you.", "People who already know you are the most likely to join your brand.", "2 missions in a row", "45"],
+    cta: "hub_home",
+    ctaFor: (c) => plannedMission(c).cta ?? "hub_home",
+    sessionLinkInline: true,
+    quickReplies: [
+      { title: "✅ Done", payload: "mission:done" },
+      { title: "🙋 Help me", payload: "mission:help" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  goal_proposal: {
+    name: "boss_goal_proposal",
+    category: "MARKETING",
+    body:
+      "🎯 *Let's set your goal, {{1}}*\n\n" +
+      "Based on your pace, I think *{{2}}* can reach *{{3}}*.\n\n" +
+      "A clear target is how brands grow on purpose. Want to go for it?",
+    params: (c) => [first(c), brand(c), describeProposal(plannedProposal(c), c.boss, c.now, c.timezone)],
+    example: ["Bruno", "Bruno Club", "15 new players by Oct 26"],
+    quickReplies: [
+      { title: "✅ Let's do it", payload: "goal:accept" },
+      { title: "📈 Aim higher", payload: "goal:higher" },
+      { title: "📉 Smaller goal", payload: "goal:lower" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  goal_achieved: {
+    name: "boss_goal_achieved",
+    category: "UTILITY",
+    body:
+      "🏆 *Goal reached, {{1}}!*\n\n" +
+      "*{{2}}* hit {{3}}. That's your business growing because you pushed it.\n\n" +
+      "Ready for a bigger one?",
+    params: (c) => {
+      const g = c.coach?.state.goal;
+      return [first(c), brand(c), g ? formatAmount(g.metric, g.target, c.boss.stats.currency) : "your goal"];
+    },
+    example: ["Carla", "Carla Kingdom", "40 new players"],
+    quickReplies: [
+      { title: "🎯 New goal", payload: "goal:new" },
+      { title: "🏆 My progress", payload: "coach:progress" },
+    ],
+  },
+  level_up: {
+    name: "boss_level_up",
+    category: "UTILITY",
+    body:
+      "🎉 *Level up, {{1}}!*\n\n" +
+      "*{{2}}* is now a *{{3}}* brand.\n\n" +
+      "Next level: {{4}}. Let's get there!",
+    params: (c) => [first(c), brand(c), levelName(c.coach!.level.current), nextLevelNeeds(c.coach!.level)],
+    example: ["Bruno", "Bruno Club", "🚀 Rising", "10 players (2/10) and your first earnings"],
+    quickReplies: [
+      { title: "🏆 My progress", payload: "coach:progress" },
+      { title: "🎯 Today's mission", payload: "mission:today" },
+    ],
+  },
+  best_day: {
+    name: "boss_best_day",
+    category: "UTILITY",
+    body:
+      "🔥 *Best day ever for {{1}}!*\n\n" +
+      "{{2}} new players joined today — your best day so far. Your marketing is working.\n\n" +
+      "Strike while it's hot: share your link once more tonight.",
+    params: (c) => [brand(c), num(c.boss.stats.newPlayersToday)],
+    example: ["Carla Kingdom", "12"],
+    cta: "brand_link",
+  },
+  momentum_drop: {
+    name: "boss_momentum_drop",
+    category: "MARKETING",
+    body:
+      "📉 *Let's turn it around, {{1}}*\n\n" +
+      "New players on *{{2}}* are down {{3}} vs last week.\n\n" +
+      "One push today makes the difference: {{4}}.",
+    params: (c) => [first(c), brand(c), `${Math.abs(c.coach!.insights.newPlayers.changePct ?? 0)}%`, lowerFirst(plannedMission(c).title)],
+    example: ["Diego", "Diego Den", "40%", "share your link in 3 groups"],
+    cta: "hub_home",
+    ctaFor: (c) => plannedMission(c).cta ?? "hub_home",
+    sessionLinkInline: true,
+    quickReplies: [
+      { title: "✅ Done", payload: "mission:done" },
+      { title: "🙋 Help me", payload: "mission:help" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  follow_up: {
+    name: "boss_follow_up",
+    category: "UTILITY",
+    body: "👋 *Checking in, {{1}}*\n\nLast time you planned to {{2}}. How did it go?",
+    params: (c) => {
+      const due = c.coach!.state.followUps.find((f) => f.status === "pending" && new Date(f.dueAt) <= c.now);
+      return [first(c), due?.reason || "take the next step for your brand"];
+    },
+    example: ["Ana", "share your link in 3 WhatsApp groups"],
+    quickReplies: [
+      { title: "✅ Done!", payload: "followup:done" },
+      { title: "😕 Not yet", payload: "followup:notyet" },
+    ],
   },
 } as const satisfies Record<string, NudgeTemplate>;
 

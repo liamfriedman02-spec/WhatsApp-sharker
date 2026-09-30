@@ -8,6 +8,8 @@ export interface BossProfile {
   phone: string;
   firstName: string;
   brandName: string;
+  /** Public link players use to join the brand (used in ready-to-post content). */
+  brandUrl?: string | null;
   /** IANA timezone, e.g. "America/Sao_Paulo". Falls back to DEFAULT_TIMEZONE. */
   timezone?: string;
   /** Boss agreed to receive proactive WhatsApp messages (required by WhatsApp policy). */

@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { defaultCoachState, type CoachState, type MissionRecord, type StatSnapshot } from "../coach/types.js";
 
 export type DigestPref = "daily" | "weekly" | "off";
 
@@ -66,6 +67,7 @@ export interface Handoff {
  */
 export interface Store {
   getState(bossId: string, phone: string): Promise<BossState>;
+  /** Persists the state as given (callers stamp `updatedAt` with their clock). */
   saveState(state: BossState): Promise<void>;
 
   logMessage(bossId: string, direction: "in" | "out", text: string, source: string, at?: Date): Promise<void>;
@@ -87,6 +89,18 @@ export interface Store {
   getHandoff(id: number): Promise<Handoff | null>;
   listHandoffs(status?: Handoff["status"]): Promise<Handoff[]>;
   updateHandoff(id: number, patch: Partial<Pick<Handoff, "status" | "summary">>): Promise<void>;
+
+  getCoachState(bossId: string): Promise<CoachState>;
+  saveCoachState(bossId: string, state: CoachState): Promise<void>;
+
+  assignMission(bossId: string, missionId: string, date: string, at: Date): Promise<MissionRecord>;
+  /** Missions assigned for local dates >= sinceDate (YYYY-MM-DD), oldest first. */
+  missionsSince(bossId: string, sinceDate: string): Promise<MissionRecord[]>;
+  updateMission(id: number, status: MissionRecord["status"], completedAt: Date | null): Promise<void>;
+
+  saveSnapshot(bossId: string, snapshot: StatSnapshot): Promise<void>;
+  /** Snapshots for local dates >= sinceDate, oldest first. */
+  snapshotsSince(bossId: string, sinceDate: string): Promise<StatSnapshot[]>;
 
   close(): void;
 }
@@ -139,6 +153,27 @@ CREATE TABLE IF NOT EXISTS handoffs (
   summary TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS coach_state (
+  boss_id TEXT PRIMARY KEY,
+  json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS missions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  boss_id TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  status TEXT NOT NULL,
+  assigned_at TEXT NOT NULL,
+  completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS missions_boss ON missions(boss_id, date);
+CREATE TABLE IF NOT EXISTS snapshots (
+  boss_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  json TEXT NOT NULL,
+  PRIMARY KEY (boss_id, date)
 );
 CREATE TABLE IF NOT EXISTS processed (
   kind TEXT NOT NULL,
@@ -207,7 +242,7 @@ export class SqliteStore implements Store {
         s.flow ? JSON.stringify(s.flow) : null,
         s.lastInboundAt,
         s.handoffId,
-        new Date().toISOString(),
+        s.updatedAt,
       );
   }
 
@@ -323,9 +358,70 @@ export class SqliteStore implements Store {
       .run(patch.status ?? current.status, patch.summary ?? current.summary, new Date().toISOString(), id);
   }
 
+  async getCoachState(bossId: string): Promise<CoachState> {
+    const row = this.db.prepare("SELECT json FROM coach_state WHERE boss_id = ?").get(bossId) as Row | undefined;
+    return row ? { ...defaultCoachState(), ...(JSON.parse(String(row.json)) as Partial<CoachState>) } : defaultCoachState();
+  }
+
+  async saveCoachState(bossId: string, state: CoachState): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO coach_state (boss_id, json, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(boss_id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at`,
+      )
+      .run(bossId, JSON.stringify(state), new Date().toISOString());
+  }
+
+  async assignMission(bossId: string, missionId: string, date: string, at: Date): Promise<MissionRecord> {
+    const res = this.db
+      .prepare("INSERT INTO missions (boss_id, mission_id, date, status, assigned_at) VALUES (?, ?, ?, 'open', ?)")
+      .run(bossId, missionId, date, at.toISOString());
+    const row = this.db.prepare("SELECT * FROM missions WHERE id = ?").get(Number(res.lastInsertRowid)) as Row;
+    return toMission(row);
+  }
+
+  async missionsSince(bossId: string, sinceDate: string): Promise<MissionRecord[]> {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE boss_id = ? AND date >= ? ORDER BY date ASC, id ASC")
+      .all(bossId, sinceDate) as Row[];
+    return rows.map(toMission);
+  }
+
+  async updateMission(id: number, status: MissionRecord["status"], completedAt: Date | null): Promise<void> {
+    this.db.prepare("UPDATE missions SET status = ?, completed_at = ? WHERE id = ?").run(status, completedAt?.toISOString() ?? null, id);
+  }
+
+  async saveSnapshot(bossId: string, snapshot: StatSnapshot): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO snapshots (boss_id, date, json) VALUES (?, ?, ?)
+         ON CONFLICT(boss_id, date) DO UPDATE SET json = excluded.json`,
+      )
+      .run(bossId, snapshot.date, JSON.stringify(snapshot));
+  }
+
+  async snapshotsSince(bossId: string, sinceDate: string): Promise<StatSnapshot[]> {
+    const rows = this.db
+      .prepare("SELECT json FROM snapshots WHERE boss_id = ? AND date >= ? ORDER BY date ASC")
+      .all(bossId, sinceDate) as Row[];
+    return rows.map((r) => JSON.parse(String(r.json)) as StatSnapshot);
+  }
+
   close(): void {
     this.db.close();
   }
+}
+
+function toMission(r: Row): MissionRecord {
+  return {
+    id: Number(r.id),
+    bossId: String(r.boss_id),
+    missionId: String(r.mission_id),
+    date: String(r.date),
+    status: r.status as MissionRecord["status"],
+    assignedAt: String(r.assigned_at),
+    completedAt: (r.completed_at as string | null) ?? null,
+  };
 }
 
 function toHandoff(r: Row): Handoff {

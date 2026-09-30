@@ -1,3 +1,4 @@
+import type { StatSnapshot } from "../coach/types.js";
 import type { BossProfile, SharkerPlatform } from "./types.js";
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -159,4 +160,32 @@ export function demoBosses(now = Date.now()): BossProfile[] {
       now,
     ),
   ];
+}
+
+/**
+ * Eight days of daily stat snapshots for the demo Bosses, so the coach can show
+ * week-over-week trends in the simulator: Carla is growing, Diego is slowing down.
+ */
+export function demoHistory(now = Date.now()): Record<string, StatSnapshot[]> {
+  const date = (daysAgo: number) => new Date(now - daysAgo * DAY).toISOString().slice(0, 10);
+  const series = (days: number, f: (d: number) => Omit<StatSnapshot, "date">) =>
+    Array.from({ length: days }, (_, i) => ({ date: date(days - i), ...f(days - i) }));
+  return {
+    boss_carla: series(8, (d) => ({
+      totalPlayers: 248 - d * 4,
+      newPlayersToday: 3,
+      newPlayers7d: 25,
+      activePlayers7d: 110,
+      earningsTotal: 4820.75 - d * 85,
+      earnings7d: 540,
+    })),
+    boss_diego: series(8, (d) => ({
+      totalPlayers: 41 - Math.min(d, 3),
+      newPlayersToday: 2,
+      newPlayers7d: 11,
+      activePlayers7d: 16,
+      earningsTotal: 530 - d * 6,
+      earnings7d: 61,
+    })),
+  };
 }

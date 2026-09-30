@@ -6,7 +6,7 @@
  * Type a message, or a number to tap a button/row from the last reply. Commands:
  *   /boss <n>              switch Boss (/boss to list)
  *   /set <path>=<json>     change the Boss's data, e.g. /set aiAgent.activated=true
- *   /nudge                 run the retention engine for this Boss now
+ *   /nudge                 run the retention engine for this Boss now (proactive coaching)
  *   /time +<n>d|h          move the simulated clock forward
  *   /quit
  */
@@ -17,7 +17,7 @@ import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { NUDGES, fillTemplate, type NudgeTemplate } from "../src/content/nudges.js";
 import { createLogger } from "../src/logger.js";
-import { InMemoryPlatform, demoBosses } from "../src/platform/mockPlatform.js";
+import { InMemoryPlatform, demoBosses, demoHistory } from "../src/platform/mockPlatform.js";
 import type { BossProfile } from "../src/platform/types.js";
 import { SqliteStore } from "../src/store/store.js";
 import { RecordingMessenger, renderMessage } from "../src/whatsapp/consoleMessenger.js";
@@ -33,9 +33,13 @@ const messenger = new RecordingMessenger((_to, m) => print(m));
 const assistant = config.ai.apiKey
   ? new ClaudeAssistant({ client: new Anthropic({ apiKey: config.ai.apiKey }), model: config.ai.model, effort: config.ai.effort, refusalFallback: config.ai.refusalFallback, logger })
   : null;
+const store = new SqliteStore(":memory:");
+for (const [bossId, snapshots] of Object.entries(demoHistory(clock))) {
+  for (const snap of snapshots) void store.saveSnapshot(bossId, snap);
+}
 const app = createApp(config, logger, {
   platform,
-  store: new SqliteStore(":memory:"),
+  store,
   messenger,
   assistant,
   now: () => new Date(clock),

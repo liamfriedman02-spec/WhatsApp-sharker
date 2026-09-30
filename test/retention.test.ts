@@ -13,7 +13,7 @@ async function run(h: Harness, bossId: string) {
 /** Runs the engine hourly for `days` and returns every nudge sent. */
 async function simulate(h: Harness, bossId: string, days: number, onTick?: (i: number) => void) {
   const sent: { at: Date; trigger: string; template: string; step: number }[] = [];
-  for (let i = 0; i < days * 24; i++) {
+  for (let i = 0; i < Math.round(days * 24); i++) {
     onTick?.(i);
     const d = await run(h, bossId);
     if (d.sent) sent.push({ at: h.now(), trigger: d.sent.trigger, template: d.sent.template, step: d.sent.step });
@@ -36,8 +36,8 @@ describe("AI Marketing Agent activation funnel", () => {
 
   it("moves the Boss to the next step and never repeats a completed one", async () => {
     const h = harness();
-    // Day 1: welcome + first activation reminder.
-    let sent = await simulate(h, "boss_ana", 1);
+    // Monday: welcome + first activation reminder.
+    let sent = await simulate(h, "boss_ana", 0.5);
     expect(sent.map((s) => s.trigger)).toEqual(["welcome", "agent_activate"]);
 
     // Boss activates the Agent → next nudge is "connect your socials", activation reminders stop.
@@ -78,29 +78,55 @@ describe("AI Marketing Agent activation funnel", () => {
 });
 
 describe("frequency & respect", () => {
-  it("never exceeds 2 nudges per 24h or 1 reminder/summary per 24h, and never in quiet hours", async () => {
+  it("per local day: ≤ 2 messages, ≤ 1 reminder/summary; reminders ≥ 12h apart; never in quiet hours", async () => {
     const h = harness();
-    const milestones = ["welcome", "first_player", "first_earnings", "agent_live", "agent_first_post"];
+    const milestones = ["welcome", "first_player", "first_earnings", "agent_live", "agent_first_post", "level_up", "goal_achieved", "best_day"];
     for (const id of ["boss_ana", "boss_bruno", "boss_carla", "boss_diego"]) {
+      const tz = (await h.platform.getBoss(id))!.timezone ?? "UTC";
       const sent = await simulate(h, id, 21);
       expect(sent.length).toBeGreaterThan(3);
+      const byDay = new Map<string, typeof sent>();
       for (const s of sent) {
-        const window = sent.filter((o) => o.at.getTime() > s.at.getTime() - DAY && o.at.getTime() <= s.at.getTime());
-        expect(window.length).toBeLessThanOrEqual(2);
-        expect(window.filter((o) => !milestones.includes(o.trigger)).length).toBeLessThanOrEqual(1);
-        const tz = (await h.platform.getBoss(id))!.timezone ?? "UTC";
+        const day = localTime(s.at, tz).date;
+        byDay.set(day, [...(byDay.get(day) ?? []), s]);
         expect(inQuietHours(localTime(s.at, tz).hour, 21, 9)).toBe(false);
+      }
+      for (const day of byDay.values()) {
+        expect(day.length).toBeLessThanOrEqual(2);
+        expect(day.filter((o) => !milestones.includes(o.trigger)).length).toBeLessThanOrEqual(1);
+      }
+      const reminders = sent.filter((o) => !milestones.includes(o.trigger));
+      for (let i = 1; i < reminders.length; i++) {
+        expect(reminders[i]!.at.getTime() - reminders[i - 1]!.at.getTime()).toBeGreaterThanOrEqual(12 * HOUR);
       }
       h.setNow(MONDAY_NOON);
     }
   });
 
-  it("still sends the weekly summary when Monday's slot was taken by a reminder", async () => {
+  it("keeps a weekly reminder budget set by the Boss's coaching intensity", async () => {
+    const milestones = ["welcome", "first_player", "first_earnings", "agent_live", "agent_first_post", "level_up", "goal_achieved", "best_day"];
+    const caps = { light: 2, standard: 4, intense: 7 } as const;
+    for (const intensity of ["light", "standard", "intense"] as const) {
+      const h = harness();
+      await h.store.saveCoachState("boss_ana", { ...(await h.store.getCoachState("boss_ana")), intensity });
+      const sent = (await simulate(h, "boss_ana", 21)).filter((s) => !milestones.includes(s.trigger));
+      for (const s of sent) {
+        // The budget window is 7 days minus a 2h tolerance (keeps weekly rhythms from drifting).
+        const week = sent.filter((o) => o.at.getTime() > s.at.getTime() - (7 * DAY - 2 * HOUR) && o.at.getTime() <= s.at.getTime());
+        expect(week.length, intensity).toBeLessThanOrEqual(caps[intensity]);
+      }
+    }
+  });
+
+  it("still sends the weekly coaching when Monday's slot was taken by a reminder", async () => {
     const h = harness();
     const sent = await simulate(h, "boss_diego", 14);
-    const weekly = sent.filter((s) => s.trigger === "weekly_summary");
-    expect(weekly.length).toBe(2);
+    const weekly = sent.filter((s) => s.trigger === "weekly_coaching");
+    expect(weekly.length).toBeGreaterThanOrEqual(2);
     for (const w of weekly) expect([1, 2, 3]).toContain(w.at.getUTCDay());
+    for (let i = 1; i < weekly.length; i++) {
+      expect(weekly[i]!.at.getTime() - weekly[i - 1]!.at.getTime()).toBeGreaterThanOrEqual(6 * DAY);
+    }
   });
 
   it("stops completely for opted-out Bosses, Bosses without WhatsApp opt-in, and during a human handoff", async () => {
@@ -183,32 +209,38 @@ describe("milestones & performance", () => {
     expect(candidates).not.toContain("agent_live");
   });
 
-  it("sends the weekly summary on Monday morning with the next best action", async () => {
+  it("sends the weekly coaching on Monday morning with trends, level, goal and this week's focus", async () => {
     const h = harness({ now: new Date("2026-09-28T14:00:00Z") }); // Monday 11:00 in São Paulo
     await h.store.recordNudge({ bossId: "boss_carla", trigger: "welcome", category: "milestone", channel: "template", step: 0, messageId: null, sentAt: "2026-09-01T12:00:00.000Z" });
+    await h.store.saveSnapshot("boss_carla", { date: "2026-09-21", totalPlayers: 217, newPlayersToday: 3, newPlayers7d: 25, activePlayers7d: 110, earningsTotal: 4208, earnings7d: 540 });
     const d = await run(h, "boss_carla");
-    expect(d.sent?.trigger).toBe("weekly_summary");
+    expect(d.sent?.trigger).toBe("weekly_coaching");
     const msg = h.messenger.to(PHONES.carla).at(-1);
     expect(msg?.kind === "template" && msg.bodyParams).toEqual([
       "Carla Kingdom",
       "31",
-      "248",
+      "+24% vs last week",
       "$612.30",
-      "14 posts this week",
-      "keep sharing your brand link while your AI Agent posts for you",
+      "+13% vs last week",
+      "👑 Elite",
+      "not set yet",
+      "bring 5 players back",
     ]);
+    // This week's focus became today's mission, so "✅ Done" knows what to check.
+    const missions = await h.store.missionsSince("boss_carla", "2026-09-28");
+    expect(missions.map((m) => m.missionId)).toEqual(["reengage_players"]);
     h.advance(3 * DAY);
-    expect((await run(h, "boss_carla")).candidates.map((c) => c.trigger)).not.toContain("weekly_summary");
+    expect((await run(h, "boss_carla")).candidates.map((c) => c.trigger)).not.toContain("weekly_coaching");
   });
 
   it("brings back inactive Bosses with their real numbers", async () => {
     const h = harness();
     await h.store.recordNudge({ bossId: "boss_diego", trigger: "welcome", category: "milestone", channel: "template", step: 0, messageId: null, sentAt: "2026-09-01T12:00:00.000Z" });
-    const sent = await simulate(h, "boss_diego", 1);
-    expect(sent.map((s) => s.trigger)).toContain("agent_activate");
-    expect(sent.map((s) => s.trigger)).not.toContain("inactive"); // 1 reminder per day: Agent comes first
-    const later = await simulate(h, "boss_diego", 2);
-    expect(later.map((s) => s.template)).toContain("boss_inactive_1");
+    const sent = await simulate(h, "boss_diego", 2);
+    // 1 reminder per day: the Agent comes first, the "come back" message the next day.
+    expect(sent[0]?.trigger).toBe("agent_activate");
+    expect(sent[1]?.template).toBe("boss_inactive_1");
+    expect(localTime(sent[1]!.at, "UTC").date).not.toBe(localTime(sent[0]!.at, "UTC").date);
     const msg = h.messenger.sent.find((s) => s.message.kind === "template" && s.message.name === "boss_inactive_1")?.message;
     expect(msg?.kind === "template" && msg.bodyParams).toEqual(["Diego", "Diego Den", "3", "$22.10"]);
   });

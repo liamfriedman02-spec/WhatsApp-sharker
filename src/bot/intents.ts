@@ -1,7 +1,19 @@
 import { FAQ, type FaqEntry } from "../content/faq.js";
 import { TOPICS, type Topic } from "../content/topics.js";
 
-export type Command = "menu" | "help" | "human" | "stop" | "start" | "settings" | "business" | "agent" | "learn";
+export type Command =
+  | "menu"
+  | "help"
+  | "human"
+  | "stop"
+  | "start"
+  | "settings"
+  | "business"
+  | "agent"
+  | "learn"
+  | "mission"
+  | "progress"
+  | "post";
 
 /** Short exact-match commands (after normalization). Everything else goes to the assistant. */
 const COMMANDS: Record<Command, string[]> = {
@@ -14,6 +26,9 @@ const COMMANDS: Record<Command, string[]> = {
   business: ["my business", "stats", "my stats", "dashboard", "report", "summary", "performance"],
   agent: ["my ai agent", "ai agent", "my agent", "agent status"],
   learn: ["learn", "education", "course", "topics", "tutorial"],
+  mission: ["mission", "my mission", "today's mission", "todays mission", "daily mission", "challenge", "what should i do today"],
+  progress: ["progress", "my progress", "goal", "my goal", "level", "my level", "points", "streak", "coach"],
+  post: ["post", "write a post", "write me a post", "caption", "post ideas", "content"],
 };
 
 export function normalize(text: string): string {

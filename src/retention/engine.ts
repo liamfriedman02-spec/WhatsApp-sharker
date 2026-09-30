@@ -1,3 +1,5 @@
+import { CoachService } from "../coach/service.js";
+import type { CoachIntensity } from "../coach/types.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
 import type { NudgeTemplate } from "../content/nudges.js";
@@ -30,6 +32,7 @@ export interface RetentionDeps {
   messenger: Messenger;
   config: Config;
   logger: Logger;
+  coach?: CoachService;
   now?: () => Date;
 }
 
@@ -37,13 +40,22 @@ export interface RetentionDeps {
 const ACTIVE_CONVERSATION_MS = 1 * HOUR;
 /** Minimum spacing between any two proactive messages. */
 const MIN_GAP_BETWEEN_NUDGES_MS = 3 * HOUR;
+/** Minimum spacing between two reminders/summaries (no evening + next-morning double). */
+const MIN_GAP_BETWEEN_REMINDERS_MS = 12 * HOUR;
+/** Reminders/summaries per rolling 7 days, by coaching intensity (celebrations and requested check-ins excluded). */
+const WEEKLY_REMINDER_CAP: Record<CoachIntensity, number> = { light: 2, standard: 4, intense: 7 };
+/** The Boss asked for these check-ins, so they don't use the weekly budget. */
+const REQUESTED_TRIGGERS = new Set(["follow_up"]);
 /** Stay safely inside WhatsApp's 24h customer-service window for free-form messages. */
 const SESSION_WINDOW_MS = 24 * HOUR - 15 * 60_000;
 
 export class RetentionEngine {
   private sweeping = false;
+  private readonly coach: CoachService;
 
-  constructor(private readonly deps: RetentionDeps) {}
+  constructor(private readonly deps: RetentionDeps) {
+    this.coach = deps.coach ?? new CoachService({ store: deps.store, platform: deps.platform, logger: deps.logger });
+  }
 
   private now(): Date {
     return this.deps.now?.() ?? new Date();
@@ -57,10 +69,14 @@ export class RetentionEngine {
     const state = await store.getState(boss.id, boss.phone);
     const local = localTime(now, ctx.timezone);
     const lastSentIso = await store.lastSentByTrigger(boss.id);
+    // Loading the coach view also records today's stats snapshot (not in previews).
+    const coach = await this.coach.view(ctx, { readOnly: !!opts.dryRun });
+    ctx.coach = coach;
     const input: TriggerInput = {
       ctx,
       state,
       local,
+      coach,
       lastSent: (id) => (lastSentIso[id] ? new Date(lastSentIso[id]) : null),
     };
 
@@ -74,7 +90,7 @@ export class RetentionEngine {
     const blocked = this.globalBlock(boss, state, local.hour);
     if (blocked) return { ...decision, blocked };
 
-    const chosen = await this.applyCaps(candidates, state, now, boss.id);
+    const chosen = await this.applyCaps(candidates, state, now, boss.id, ctx.timezone, coach.state.intensity);
     if ("blocked" in chosen) return { ...decision, blocked: chosen.blocked };
 
     const channel: Channel =
@@ -86,6 +102,7 @@ export class RetentionEngine {
       return { ...decision, sent: { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, messageId: null } };
     }
     const messageId = await this.deliver(chosen, ctx, channel, now);
+    await chosen.trigger.onSent?.(input, this.coach);
     return {
       ...decision,
       sent: { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, messageId },
@@ -176,19 +193,35 @@ export class RetentionEngine {
     return null;
   }
 
+  /**
+   * Frequency rules, per the Boss's local calendar day (so daily messages keep a stable time):
+   * at most `maxNudgesPerDay` messages and `maxRemindersPerDay` reminders/summaries per day,
+   * a weekly reminder budget set by coaching intensity, reminders at least 12h apart,
+   * anything at least 3h apart, and no reminders mid-chat.
+   * Milestones (celebrations) only respect the daily total.
+   */
   private async applyCaps(
     candidates: Candidate[],
     state: BossState,
     now: Date,
     bossId: string,
+    timezone: string,
+    intensity: CoachIntensity,
   ): Promise<Candidate | { blocked: string }> {
     const r = this.deps.config.retention;
-    const recent = await this.deps.store.nudgesSince(bossId, new Date(now.getTime() - DAY));
-    if (recent.length >= r.maxNudgesPerDay) return { blocked: "daily_cap" };
-    const last = recent.at(-1);
-    const tooSoon = !!last && now.getTime() - new Date(last.sentAt).getTime() < MIN_GAP_BETWEEN_NUDGES_MS;
-    const nonMilestones = recent.filter((n) => n.category !== "milestone").length;
-    const chatting = !!state.lastInboundAt && now.getTime() - new Date(state.lastInboundAt).getTime() < ACTIVE_CONVERSATION_MS;
+    // 2h tolerance keeps a weekly rhythm from drifting an hour later every week.
+    const week = await this.deps.store.nudgesSince(bossId, new Date(now.getTime() - 7 * DAY + 2 * HOUR));
+    const recent = week.filter((n) => now.getTime() - new Date(n.sentAt).getTime() <= 36 * HOUR);
+    const weeklyReminders = week.filter((n) => n.category !== "milestone" && !REQUESTED_TRIGGERS.has(n.trigger)).length;
+    const today = localTime(now, timezone).date;
+    const sentToday = recent.filter((n) => localTime(new Date(n.sentAt), timezone).date === today);
+    if (sentToday.length >= r.maxNudgesPerDay) return { blocked: "daily_cap" };
+
+    const since = (iso: string | undefined) => (iso ? now.getTime() - new Date(iso).getTime() : Infinity);
+    const tooSoon = since(recent.at(-1)?.sentAt) < MIN_GAP_BETWEEN_NUDGES_MS;
+    const reminderTooSoon = since(recent.filter((n) => n.category !== "milestone").at(-1)?.sentAt) < MIN_GAP_BETWEEN_REMINDERS_MS;
+    const remindersToday = sentToday.filter((n) => n.category !== "milestone").length;
+    const chatting = since(state.lastInboundAt ?? undefined) < ACTIVE_CONVERSATION_MS;
 
     let reason = "reminder_cap";
     for (const c of candidates) {
@@ -202,7 +235,11 @@ export class RetentionEngine {
         continue;
       }
       // Reminders and summaries share one daily slot so the Boss never gets both on the same day.
-      if (nonMilestones >= r.maxRemindersPerDay) continue;
+      if (remindersToday >= r.maxRemindersPerDay || reminderTooSoon) continue;
+      if (!REQUESTED_TRIGGERS.has(c.trigger.id) && weeklyReminders >= WEEKLY_REMINDER_CAP[intensity]) {
+        reason = "weekly_cap";
+        continue;
+      }
       return c;
     }
     return { blocked: reason };

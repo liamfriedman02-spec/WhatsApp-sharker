@@ -1,0 +1,238 @@
+import type { ContentCtx } from "../content/context.js";
+import { levelView, type LevelView } from "../content/levels.js";
+import { getMission, pickMission, type MissionDef } from "../content/missions.js";
+import type { Logger } from "../logger.js";
+import type { BossProfile, SharkerPlatform } from "../platform/types.js";
+import type { Store } from "../store/store.js";
+import { DAY, HOUR, localTime } from "../util/time.js";
+import { adjustProposal, goalView, proposeGoal, startGoal, type GoalView } from "./goals.js";
+import { addDays, computeInsights, type Insights } from "./insights.js";
+import type { CoachIntensity, CoachState, FollowUp, Goal, GoalMetric, GoalProposal, MissionRecord, StatSnapshot } from "./types.js";
+
+export interface ActiveMission {
+  record: MissionRecord;
+  def: MissionDef;
+}
+
+/** The coach's full picture of one Boss at one moment. */
+export interface CoachView {
+  state: CoachState;
+  insights: Insights;
+  level: LevelView;
+  goal: GoalView | null;
+  /** Boss's local date (YYYY-MM-DD). */
+  today: string;
+  todayMission: ActiveMission | null;
+  /** Missions from the last 60 days, oldest first. */
+  history: MissionRecord[];
+}
+
+export type MissionResult =
+  | { status: "done"; points: number; streak: number; totalPoints: number }
+  | { status: "not_verified" };
+
+const MAX_NOTES = 20;
+const MAX_PENDING_FOLLOWUPS = 3;
+
+export class CoachService {
+  constructor(private readonly deps: { store: Store; platform: SharkerPlatform; logger: Logger }) {}
+
+  /**
+   * Builds the coach view. Unless `readOnly`, it also records today's stats snapshot,
+   * expires finished goals and initializes the Boss's level (without celebrating it).
+   */
+  async view(ctx: ContentCtx, opts: { readOnly?: boolean } = {}): Promise<CoachView> {
+    const { store } = this.deps;
+    const boss = ctx.boss;
+    const today = localTime(ctx.now, ctx.timezone).date;
+    const [state, snapshots, history] = await Promise.all([
+      store.getCoachState(boss.id),
+      store.snapshotsSince(boss.id, addDays(today, -14)),
+      store.missionsSince(boss.id, addDays(today, -60)),
+    ]);
+    const insights = computeInsights(ctx, snapshots, today);
+    const level = levelView(boss);
+
+    let dirty = false;
+    if (state.goal?.status === "active" && goalView(state.goal, boss, ctx.now).status === "expired") {
+      state.goal = { ...state.goal, status: "expired" };
+      dirty = true;
+    }
+    if (state.level === undefined) {
+      state.level = level.current?.level ?? 0;
+      dirty = true;
+    }
+    if (!opts.readOnly) {
+      await store.saveSnapshot(boss.id, snapshotOf(boss, today));
+      if (dirty) await store.saveCoachState(boss.id, state);
+    }
+
+    const rec = history.filter((r) => r.date === today).at(-1);
+    const def = rec ? getMission(rec.missionId) : undefined;
+    return {
+      state,
+      insights,
+      level,
+      goal: state.goal ? goalView(state.goal, boss, ctx.now) : null,
+      today,
+      todayMission: rec && def ? { record: rec, def } : null,
+      history,
+    };
+  }
+
+  async save(bossId: string, state: CoachState): Promise<void> {
+    await this.deps.store.saveCoachState(bossId, state);
+  }
+
+  // ── Missions ──────────────────────────────────────────────────────────────
+
+  /** The mission the picker would give today (no side effects). */
+  suggestMission(ctx: ContentCtx, view: CoachView, exclude: string[] = []): MissionDef {
+    const goalMetric = view.state.goal?.status === "active" ? view.state.goal.metric : null;
+    return pickMission({ ctx, insights: view.insights, goalMetric, history: view.history }, exclude);
+  }
+
+  async assignMission(ctx: ContentCtx, view: CoachView, exclude: string[] = []): Promise<ActiveMission> {
+    return this.assign(ctx, view, this.suggestMission(ctx, view, exclude));
+  }
+
+  /** Makes `def` today's mission. */
+  async assign(ctx: ContentCtx, view: CoachView, def: MissionDef): Promise<ActiveMission> {
+    const record = await this.deps.store.assignMission(ctx.boss.id, def.id, view.today, ctx.now);
+    view.history.push(record);
+    view.todayMission = { record, def };
+    return view.todayMission;
+  }
+
+  /** Today's mission (whatever its status), or a freshly assigned one. */
+  async ensureTodayMission(ctx: ContentCtx, view: CoachView): Promise<ActiveMission> {
+    return view.todayMission ?? this.assignMission(ctx, view);
+  }
+
+  /** Another mission for today, excluding everything already given today. */
+  async bonusMission(ctx: ContentCtx, view: CoachView): Promise<ActiveMission> {
+    const givenToday = view.history.filter((r) => r.date === view.today).map((r) => r.missionId);
+    return this.assignMission(ctx, view, givenToday);
+  }
+
+  async completeMission(ctx: ContentCtx, view: CoachView, mission: ActiveMission): Promise<MissionResult> {
+    const { store, platform } = this.deps;
+    if (mission.def.verify) {
+      platform.invalidate?.({ id: ctx.boss.id, phone: ctx.boss.phone });
+      const fresh = (await platform.getBoss(ctx.boss.id)) ?? ctx.boss;
+      if (!mission.def.verify(fresh, ctx.now)) return { status: "not_verified" };
+    }
+    if (mission.record.status !== "done") {
+      await store.updateMission(mission.record.id, "done", ctx.now);
+      mission.record.status = "done";
+      mission.record.completedAt = ctx.now.toISOString();
+      const s = view.state;
+      const gapDays = s.lastMissionDoneAt ? (ctx.now.getTime() - new Date(s.lastMissionDoneAt).getTime()) / DAY : Infinity;
+      s.streak = gapDays <= 3 ? s.streak + 1 : 1;
+      s.points += mission.def.points;
+      s.lastMissionDoneAt = ctx.now.toISOString();
+      await this.save(ctx.boss.id, s);
+    }
+    return { status: "done", points: mission.def.points, streak: view.state.streak, totalPoints: view.state.points };
+  }
+
+  async skipMission(bossId: string, view: CoachView, mission: ActiveMission): Promise<void> {
+    await this.deps.store.updateMission(mission.record.id, "skipped", null);
+    mission.record.status = "skipped";
+    view.state.streak = 0;
+    await this.save(bossId, view.state);
+  }
+
+  // ── Goals ─────────────────────────────────────────────────────────────────
+
+  async proposeGoal(ctx: ContentCtx, view: CoachView): Promise<GoalProposal> {
+    view.state.pendingGoal = proposeGoal(ctx.boss, view.insights, ctx.now, view.state.goal);
+    await this.save(ctx.boss.id, view.state);
+    return view.state.pendingGoal;
+  }
+
+  async adjustPendingGoal(ctx: ContentCtx, view: CoachView, factor: number): Promise<GoalProposal> {
+    const current = view.state.pendingGoal ?? proposeGoal(ctx.boss, view.insights, ctx.now, view.state.goal);
+    view.state.pendingGoal = adjustProposal(current, factor);
+    await this.save(ctx.boss.id, view.state);
+    return view.state.pendingGoal;
+  }
+
+  async acceptPendingGoal(ctx: ContentCtx, view: CoachView): Promise<Goal> {
+    const p = view.state.pendingGoal ?? proposeGoal(ctx.boss, view.insights, ctx.now, view.state.goal);
+    return this.setGoal(ctx, view, p.metric, p.target, p.days);
+  }
+
+  async setGoal(ctx: ContentCtx, view: CoachView, metric: GoalMetric, target: number, days: number): Promise<Goal> {
+    const goal = startGoal(ctx.boss, metric, Math.max(1, target), Math.min(Math.max(Math.round(days), 3), 90), ctx.now);
+    view.state.goal = goal;
+    view.state.pendingGoal = null;
+    view.goal = goalView(goal, ctx.boss, ctx.now);
+    await this.save(ctx.boss.id, view.state);
+    this.deps.logger.info("coach: goal set", { bossId: ctx.boss.id, metric, target: goal.target });
+    return goal;
+  }
+
+  async markGoalAchieved(bossId: string, view: CoachView, now: Date): Promise<void> {
+    if (!view.state.goal || view.state.goal.status !== "active") return;
+    view.state.goal = { ...view.state.goal, status: "achieved", achievedAt: now.toISOString() };
+    await this.save(bossId, view.state);
+  }
+
+  // ── Memory, follow-ups, preferences ───────────────────────────────────────
+
+  async remember(bossId: string, view: CoachView, notes: string[], now: Date): Promise<void> {
+    const clean = notes.map((n) => n.replace(/\s+/g, " ").trim().slice(0, 200)).filter(Boolean);
+    const known = new Set(view.state.notes.map((n) => n.text.toLowerCase()));
+    const fresh = clean.filter((n) => !known.has(n.toLowerCase()));
+    if (fresh.length === 0) return;
+    view.state.notes = [...view.state.notes, ...fresh.map((text) => ({ text, at: now.toISOString() }))].slice(-MAX_NOTES);
+    await this.save(bossId, view.state);
+  }
+
+  async scheduleFollowUp(bossId: string, view: CoachView, inHours: number, reason: string, now: Date): Promise<FollowUp> {
+    const followUp: FollowUp = {
+      id: `fu_${now.getTime().toString(36)}`,
+      dueAt: new Date(now.getTime() + Math.min(Math.max(inHours, 1), 168) * HOUR).toISOString(),
+      reason: reason.replace(/\s+/g, " ").trim().slice(0, 140),
+      status: "pending",
+    };
+    const pending = view.state.followUps.filter((f) => f.status === "pending");
+    const done = view.state.followUps.filter((f) => f.status !== "pending").slice(-5);
+    view.state.followUps = [...done, ...pending.slice(-(MAX_PENDING_FOLLOWUPS - 1)), followUp];
+    await this.save(bossId, view.state);
+    return followUp;
+  }
+
+  dueFollowUp(view: CoachView, now: Date): FollowUp | null {
+    return view.state.followUps.find((f) => f.status === "pending" && new Date(f.dueAt).getTime() <= now.getTime()) ?? null;
+  }
+
+  async markFollowUp(bossId: string, view: CoachView, id: string, status: FollowUp["status"]): Promise<void> {
+    view.state.followUps = view.state.followUps.map((f) => (f.id === id ? { ...f, status } : f));
+    await this.save(bossId, view.state);
+  }
+
+  async setIntensity(bossId: string, view: CoachView, intensity: CoachIntensity): Promise<void> {
+    view.state.intensity = intensity;
+    await this.save(bossId, view.state);
+  }
+
+  async setLevel(bossId: string, view: CoachView, level: number): Promise<void> {
+    view.state.level = level;
+    await this.save(bossId, view.state);
+  }
+}
+
+export function snapshotOf(boss: BossProfile, date: string): StatSnapshot {
+  const s = boss.stats;
+  return {
+    date,
+    totalPlayers: s.totalPlayers,
+    newPlayersToday: s.newPlayersToday,
+    newPlayers7d: s.newPlayers7d,
+    activePlayers7d: s.activePlayers7d,
+    earningsTotal: s.earningsTotal,
+    earnings7d: s.earnings7d,
+  };
+}

@@ -2,6 +2,8 @@
  * Builders for every screen the Boss can see. Pure functions of (content, Boss data) →
  * outbound messages, so they're easy to test and to preview in the simulator.
  */
+import { formatChange } from "../coach/insights.js";
+import type { CoachIntensity } from "../coach/types.js";
 import { agentChecklist, agentStatusMessage } from "../content/agent.js";
 import type { ContentCtx } from "../content/context.js";
 import { FAQ_CATEGORIES, faqByCategory, type FaqCategoryId, type FaqEntry } from "../content/faq.js";
@@ -23,7 +25,7 @@ export const BTN = {
 } satisfies Record<string, Button>;
 
 export function mainMenu(ctx: ContentCtx): OutboundMessage {
-  const { boss } = ctx;
+  const { boss, coach } = ctx;
   const nba = nextBestAction(ctx);
   const agentRow =
     ctx.stage === "live"
@@ -31,19 +33,29 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
       : ctx.stage === "needs_socials"
         ? "Almost there — connect your socials"
         : "Not active yet — let AI market for you";
+  const missionRow =
+    coach?.todayMission?.record.status === "done" ? "Done today ✅ Want a bonus one?" : truncate(capitalizeFirst(nba.text), 72);
+  const goalRow =
+    coach?.state.goal?.status === "active" && coach.goal
+      ? truncate(`${coach.goal.label} · level ${coach.level.current?.name ?? "Starter"}`, 72)
+      : `Level ${coach?.level.current?.name ?? "Starter"} · set your goal`;
+  const streak = coach && coach.state.streak > 0 ? `
+🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
   return {
     kind: "list",
-    header: "Your Boss Assistant",
-    body: `Hi ${boss.firstName}! 👋 What do you want to do for *${boss.brandName}* today?\n\n👉 Your next step: ${nba.text}.`,
+    header: "Your Boss Coach",
+    body: `Hi ${boss.firstName}! 👋 What do you want to do for *${boss.brandName}* today?\n\n👉 Your next step: ${nba.text}.${streak}`,
     footer: "Tip: you can also just type your question",
     buttonLabel: "Open menu",
     sections: [
       {
-        title: "Your business",
+        title: "Grow your business",
         rows: [
-          { id: "nba", title: "👉 My next step", description: truncate(capitalizeFirst(nba.text), 72) },
-          { id: "menu:business", title: "📊 My business", description: "Your players, earnings and GCOIN" },
+          { id: "mission:today", title: "🎯 Today's mission", description: missionRow },
+          { id: "coach:progress", title: "🏆 My goal & level", description: goalRow },
+          { id: "menu:business", title: "📊 My business", description: "Your players, earnings and trends" },
           { id: "menu:ai_agent", title: "🤖 My AI Agent", description: agentRow },
+          { id: "post:write", title: "✍️ Write me a post", description: "Ready-to-post texts for your brand" },
         ],
       },
       {
@@ -56,7 +68,7 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
       },
       {
         title: "Settings",
-        rows: [{ id: "menu:settings", title: "🔔 Notifications", description: "Choose the updates you get" }],
+        rows: [{ id: "menu:settings", title: "🔔 Coaching & alerts", description: "How hard I push you, summaries" }],
       },
     ],
   };
@@ -151,6 +163,8 @@ export function businessSnapshot(ctx: ContentCtx): OutboundMessage {
   const { boss } = ctx;
   const s = boss.stats;
   const nba = nextBestAction(ctx);
+  const trends = ctx.coach && ctx.coach.insights.newPlayers.previous !== null ? ctx.coach.insights : null;
+  const tip = ctx.coach?.insights.tips.find((t) => t.id !== "no_history" && t.id !== "agent_missing")?.text;
   const agentLine =
     ctx.stage === "live"
       ? boss.aiAgent.postsPublished7d > 0
@@ -163,11 +177,14 @@ export function businessSnapshot(ctx: ContentCtx): OutboundMessage {
     `📊 *${boss.brandName} — your business*`,
     "",
     `👥 *Your players:* ${num(s.totalPlayers)} (+${num(s.newPlayersToday)} today, +${num(s.newPlayers7d)} this week)`,
+    ...(trends ? [`   ↳ new players ${formatChange(trends.newPlayers)}`] : []),
     `🔥 Active this week: ${num(s.activePlayers7d)}`,
     `💰 *Your earnings:* ${money(s.earningsToday, s.currency)} today · ${money(s.earnings7d, s.currency)} this week`,
+    ...(trends ? [`   ↳ earnings ${formatChange(trends.earnings)}`] : []),
     `🏦 Total earned: ${money(s.earningsTotal, s.currency)}`,
     `🪙 *Your GCOIN:* ${num(s.gcoinBalance)}`,
     `🤖 *Your AI Agent:* ${agentLine}`,
+    ...(tip ? ["", tip] : []),
     "",
     `👉 *Your next step:* ${nba.text}.`,
   ];
@@ -197,17 +214,27 @@ export function nextActionMessage(ctx: ContentCtx): OutboundMessage {
   };
 }
 
-export function settingsMenu(state: BossState): OutboundMessage {
+export function settingsMenu(state: BossState, intensity: CoachIntensity = "standard"): OutboundMessage {
   const digest = { daily: "daily", weekly: "weekly", off: "off" }[state.digest];
+  const coaching = { light: "light touch", standard: "standard", intense: "push me hard 🔥" }[intensity];
   return {
     kind: "list",
     body:
-      "🔔 *Your notifications*\n\n" +
+      "🔔 *Coaching & alerts*\n\n" +
+      `💪 Coaching: *${coaching}*\n` +
       `📊 Performance summary: *${digest}*\n` +
       `💡 Tips & reminders: *${state.optedOut ? "paused" : "on"}*\n\n` +
       "What would you like?",
     buttonLabel: "Change",
     sections: [
+      {
+        title: "How hard I push you",
+        rows: [
+          { id: "settings:coach:intense", title: "🔥 Push me hard", description: "Daily missions, check-ins and goals" },
+          { id: "settings:coach:standard", title: "💪 Standard coaching", description: "Missions twice a week + weekly coaching" },
+          { id: "settings:coach:light", title: "🌿 Light touch", description: "Weekly coaching only" },
+        ],
+      },
       {
         title: "Performance summary",
         rows: [

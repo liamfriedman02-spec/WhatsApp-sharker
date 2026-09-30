@@ -1,3 +1,4 @@
+import { lowerFirst, plannedMission } from "../coach/plan.js";
 import type { ContentCtx } from "./context.js";
 import type { GuideId } from "./guides.js";
 import type { CtaId } from "./links.js";
@@ -13,10 +14,16 @@ export interface NextAction {
 /**
  * The single most valuable thing this Boss can do right now, following the journey:
  * Launch Brand → Activate AI Agent → Connect socials → Bring players → Earn (payouts) → Grow.
+ * When the coach view is loaded this is today's mission; the rules below are the fallback.
  */
 export function nextBestAction(ctx: ContentCtx): NextAction {
   const b = ctx.boss;
   if (!b.brandLaunchedAt) return { id: "launch", text: "finish launching your brand", cta: "brand_settings" };
+  // With the coach loaded, the next step *is* today's mission (one source of truth everywhere).
+  if (ctx.coach) {
+    const m = plannedMission(ctx);
+    return { id: m.id, text: lowerFirst(m.title), cta: m.cta ?? "dashboard", guide: m.guide };
+  }
   if (ctx.stage === "not_activated") {
     return { id: "activate_agent", text: "activate your AI Marketing Agent", cta: "agent_activate", guide: "activate_agent" };
   }
