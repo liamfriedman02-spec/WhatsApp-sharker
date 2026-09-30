@@ -128,7 +128,7 @@ Preview any Boss without sending anything: `GET /admin/retention/preview/{bossId
 ## Going live checklist
 
 1. **Sharker platform**: implement the read API and events webhook in [`docs/platform-api.md`](docs/platform-api.md), and collect `whatsappOptIn` during Boss onboarding. Add `brandUrl` so posts include the real link.
-2. **Meta**: create the app and WhatsApp Business number. Set the webhook to `https://<host>/webhooks/whatsapp` with `WHATSAPP_VERIFY_TOKEN`, and subscribe to `messages`.
+2. **Meta**: follow [`docs/whatsapp-setup.md`](docs/whatsapp-setup.md). You create the Meta app, fill in `.env` and point the webhook at `https://<host>/webhooks/whatsapp`. Before the Sharker API exists, `DEMO_BOSS_PHONE` lets you chat as a demo Boss from your own phone.
 3. **Templates**: run `npm run templates:export` to print all 27 proactive messages as Meta template payloads (`-- --submit` submits them). They must be approved before they can be sent outside the 24h window.
 4. **Content & tuning**: the copy in `src/content/` is a first draft. The Sharker team must verify every factual statement (earnings, payouts, GCOIN, Boss Hub section names), the Boss Hub paths in `links.ts`, the level thresholds in `levels.ts`, and the mission list in `missions.ts`.
 5. **Config**: copy `.env.example` to `.env`. In production the app refuses to start without the WhatsApp, Sharker and admin secrets.

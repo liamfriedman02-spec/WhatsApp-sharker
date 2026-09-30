@@ -38,11 +38,7 @@ export interface AppOverrides {
 
 /** Wires every dependency from config. Tests and the simulator pass overrides. */
 export function createApp(config: Config, logger: Logger, overrides: AppOverrides = {}): App {
-  const platform =
-    overrides.platform ??
-    (config.sharker.apiBaseUrl
-      ? new SharkerApiPlatform({ baseUrl: config.sharker.apiBaseUrl, apiKey: config.sharker.apiKey })
-      : (logger.warn("SHARKER_API_BASE_URL not set — using demo Bosses (development only)"), new InMemoryPlatform(demoBosses())));
+  const platform = overrides.platform ?? createPlatform(config, logger);
 
   const store = overrides.store ?? new SqliteStore(config.databasePath);
 
@@ -81,4 +77,20 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
   const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, now: overrides.now });
 
   return { config, logger, platform, store, messenger, assistant, supportDesk, coach, router, retention };
+}
+
+function createPlatform(config: Config, logger: Logger): SharkerPlatform {
+  if (config.sharker.apiBaseUrl) {
+    return new SharkerApiPlatform({ baseUrl: config.sharker.apiBaseUrl, apiKey: config.sharker.apiKey });
+  }
+  logger.warn("SHARKER_API_BASE_URL not set — using demo Bosses (development only)");
+  const bosses = demoBosses();
+  const { demoBossPhone, demoBossId } = config.sharker;
+  if (demoBossPhone) {
+    // Lets you test from your own WhatsApp before the Sharker API exists.
+    const boss = bosses.find((b) => b.id === demoBossId);
+    if (boss) boss.phone = demoBossPhone;
+    logger.info("demo Boss linked to your WhatsApp number", { bossId: demoBossId });
+  }
+  return new InMemoryPlatform(bosses);
 }

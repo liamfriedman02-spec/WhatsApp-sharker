@@ -40,6 +40,9 @@ const EnvSchema = z.object({
   SHARKER_API_KEY: optionalString,
   SHARKER_WEBHOOK_SECRET: optionalString,
   BOSS_HUB_URL: z.string().url().default("https://hub.sharker.example"),
+  /** Demo mode only (no SHARKER_API_BASE_URL): your WhatsApp number becomes a demo Boss. */
+  DEMO_BOSS_PHONE: optionalString,
+  DEMO_BOSS_ID: z.enum(["boss_ana", "boss_bruno", "boss_carla", "boss_diego"]).default("boss_ana"),
 
   // Human support
   SUPPORT_WEBHOOK_URL: optionalString,
@@ -87,6 +90,8 @@ export interface Config {
     apiKey?: string;
     webhookSecret?: string;
     bossHubUrl: string;
+    demoBossPhone?: string;
+    demoBossId: string;
   };
   support: {
     webhookUrl?: string;
@@ -138,6 +143,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       apiKey: e.SHARKER_API_KEY,
       webhookSecret: e.SHARKER_WEBHOOK_SECRET,
       bossHubUrl: e.BOSS_HUB_URL.replace(/\/+$/, ""),
+      demoBossPhone: e.DEMO_BOSS_PHONE?.replace(/\D/g, ""),
+      demoBossId: e.DEMO_BOSS_ID,
     },
     support: {
       webhookUrl: e.SUPPORT_WEBHOOK_URL,
