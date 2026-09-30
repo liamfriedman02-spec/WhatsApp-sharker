@@ -5,6 +5,14 @@ with WhatsApp, four values in `.env`, and the webhook pointed at the bot.
 
 ## 1. Put the bot online (public HTTPS)
 
+**Easiest: Render (no terminal).** Sign in at [render.com](https://render.com) with GitHub → **New → Blueprint** →
+pick this repository (and branch). Render reads `render.yaml` and asks for the secrets:
+`WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `DEMO_BOSS_PHONE`, and optionally
+`ANTHROPIC_API_KEY`. After the deploy you get `https://<name>.onrender.com`, which is your `<host>`. The
+`WHATSAPP_VERIFY_TOKEN` is generated for you; copy it from the service's **Environment** tab for step 4.
+The free plan sleeps when idle (the first message after a pause can take ~1 minute) and its disk resets on
+redeploy. That's fine for testing; use a paid instance with a disk for production.
+
 **Quick test from your computer** (Node ≥ 22.13):
 
 ```bash
