@@ -5,6 +5,8 @@ export function renderMessage(message: OutboundMessage): string {
   switch (message.kind) {
     case "text":
       return message.text;
+    case "contact_request":
+      return `${message.body}\n[ ${message.buttonLabel} ]`;
     case "buttons":
       return [
         message.header ? `*${message.header}*` : null,
@@ -55,7 +57,7 @@ export class RecordingMessenger implements Messenger {
     return { messageId: `wamid.local.${++this.seq}` };
   }
 
-  async markRead(messageId: string): Promise<void> {
+  async markRead(messageId: string, _from?: string): Promise<void> {
     this.read.push(messageId);
   }
 

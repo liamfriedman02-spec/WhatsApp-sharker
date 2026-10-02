@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ClaudeAssistant, type Assistant } from "./ai/assistant.js";
 import { LogSupportDesk, WebhookSupportDesk, type SupportDesk } from "./bot/handoff.js";
+import { ChannelMessenger } from "./channels.js";
 import { CoachService } from "./coach/service.js";
 import { BotRouter } from "./bot/router.js";
 import type { Config } from "./config.js";
@@ -10,6 +11,7 @@ import { SharkerApiPlatform } from "./platform/sharkerApi.js";
 import type { SharkerPlatform } from "./platform/types.js";
 import { RetentionEngine } from "./retention/engine.js";
 import { SqliteStore, type Store } from "./store/store.js";
+import { TelegramApi, TelegramMessenger } from "./telegram/api.js";
 import { CloudApiMessenger } from "./whatsapp/cloudApi.js";
 import { RecordingMessenger, renderMessage } from "./whatsapp/consoleMessenger.js";
 import type { Messenger } from "./whatsapp/types.js";
@@ -20,6 +22,8 @@ export interface App {
   platform: SharkerPlatform;
   store: Store;
   messenger: Messenger;
+  /** Set when TELEGRAM_BOT_TOKEN is configured. */
+  telegramApi: TelegramApi | null;
   assistant: Assistant | null;
   supportDesk: SupportDesk;
   coach: CoachService;
@@ -42,17 +46,20 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
 
   const store = overrides.store ?? new SqliteStore(config.databasePath);
 
+  const whatsapp: Messenger = config.whatsapp.dryRun
+    ? (logger.warn("WhatsApp dry-run: messages are logged, not sent"),
+      new RecordingMessenger((to, m) => logger.info("whatsapp dry-run send", { to, message: renderMessage(m) })))
+    : new CloudApiMessenger({
+        accessToken: config.whatsapp.accessToken!,
+        phoneNumberId: config.whatsapp.phoneNumberId!,
+        apiVersion: config.whatsapp.apiVersion,
+        logger,
+      });
+  const telegramApi = config.telegram.botToken ? new TelegramApi(config.telegram.botToken, logger) : null;
+  const telegramEnabled = !!telegramApi;
   const messenger =
     overrides.messenger ??
-    (config.whatsapp.dryRun
-      ? (logger.warn("WhatsApp dry-run: messages are logged, not sent"),
-        new RecordingMessenger((to, m) => logger.info("whatsapp dry-run send", { to, message: renderMessage(m) })))
-      : new CloudApiMessenger({
-          accessToken: config.whatsapp.accessToken!,
-          phoneNumberId: config.whatsapp.phoneNumberId!,
-          apiVersion: config.whatsapp.apiVersion,
-          logger,
-        }));
+    new ChannelMessenger({ whatsapp, telegram: telegramApi ? new TelegramMessenger(telegramApi, logger) : undefined });
 
   let assistant: Assistant | null = null;
   if (overrides.assistant !== undefined) assistant = overrides.assistant;
@@ -73,10 +80,10 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
     (config.support.webhookUrl ? new WebhookSupportDesk(config.support.webhookUrl, logger) : new LogSupportDesk(logger));
 
   const coach = new CoachService({ store, platform, logger });
-  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, now: overrides.now });
-  const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, now: overrides.now });
+  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, telegramEnabled, now: overrides.now });
+  const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, telegramEnabled, now: overrides.now });
 
-  return { config, logger, platform, store, messenger, assistant, supportDesk, coach, router, retention };
+  return { config, logger, platform, store, messenger, telegramApi, assistant, supportDesk, coach, router, retention };
 }
 
 function createPlatform(config: Config, logger: Logger): SharkerPlatform {

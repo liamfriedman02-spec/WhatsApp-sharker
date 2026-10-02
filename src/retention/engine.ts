@@ -1,3 +1,4 @@
+import { bossAddress, channelOf } from "../channels.js";
 import { CoachService } from "../coach/service.js";
 import type { CoachIntensity } from "../coach/types.js";
 import type { Config } from "../config.js";
@@ -7,7 +8,7 @@ import type { Logger } from "../logger.js";
 import type { BossProfile, PlatformEvent, SharkerPlatform } from "../platform/types.js";
 import type { BossState, Store } from "../store/store.js";
 import { DAY, HOUR, inQuietHours, localTime } from "../util/time.js";
-import type { Messenger } from "../whatsapp/types.js";
+import type { ChannelName, Messenger } from "../whatsapp/types.js";
 import { renderNudge, type Channel } from "./render.js";
 import { TRIGGERS, seriesLength, type Trigger, type TriggerInput } from "./triggers.js";
 
@@ -23,7 +24,16 @@ export interface Decision {
   candidates: { trigger: string; step: number; template: string }[];
   /** Why nothing was sent (when nothing was). */
   blocked?: string;
-  sent?: { trigger: string; step: number; template: string; channel: Channel; messageId: string | null };
+  sent?: {
+    trigger: string;
+    step: number;
+    template: string;
+    /** session = interactive message; template = approved WhatsApp template (outside the 24h window). */
+    channel: Channel;
+    /** The app the message went out on. */
+    via: ChannelName;
+    messageId: string | null;
+  };
 }
 
 export interface RetentionDeps {
@@ -33,6 +43,7 @@ export interface RetentionDeps {
   config: Config;
   logger: Logger;
   coach?: CoachService;
+  telegramEnabled?: boolean;
   now?: () => Date;
 }
 
@@ -87,26 +98,24 @@ export class RetentionEngine {
     };
     if (candidates.length === 0) return { ...decision, blocked: "nothing_due" };
 
-    const blocked = this.globalBlock(boss, state, local.hour);
+    const to = bossAddress(state, boss.phone, !!this.deps.telegramEnabled);
+    const via = channelOf(to);
+    const blocked = this.globalBlock(boss, state, local.hour, via);
     if (blocked) return { ...decision, blocked };
 
     const chosen = await this.applyCaps(candidates, state, now, boss.id, ctx.timezone, coach.state.intensity);
     if ("blocked" in chosen) return { ...decision, blocked: chosen.blocked };
 
-    const channel: Channel =
-      state.lastInboundAt && now.getTime() - new Date(state.lastInboundAt).getTime() < SESSION_WINDOW_MS
-        ? "session"
-        : "template";
+    // Telegram has no messaging window: always the interactive version. WhatsApp needs an
+    // approved template unless the Boss wrote on WhatsApp in the last 24h.
+    const waOpen = !!state.waLastInboundAt && now.getTime() - new Date(state.waLastInboundAt).getTime() < SESSION_WINDOW_MS;
+    const channel: Channel = via === "telegram" || waOpen ? "session" : "template";
+    const sent = { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, via };
 
-    if (opts.dryRun) {
-      return { ...decision, sent: { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, messageId: null } };
-    }
-    const messageId = await this.deliver(chosen, ctx, channel, now);
+    if (opts.dryRun) return { ...decision, sent: { ...sent, messageId: null } };
+    const messageId = await this.deliver(chosen, ctx, to, channel, now);
     await chosen.trigger.onSent?.(input, this.coach);
-    return {
-      ...decision,
-      sent: { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, messageId },
-    };
+    return { ...decision, sent: { ...sent, messageId } };
   }
 
   /** Periodic sweep over every Boss. */
@@ -184,9 +193,10 @@ export class RetentionEngine {
     return out.sort((a, b) => b.trigger.priority - a.trigger.priority);
   }
 
-  private globalBlock(boss: BossProfile, state: BossState, localHour: number): string | null {
+  private globalBlock(boss: BossProfile, state: BossState, localHour: number, via: ChannelName): string | null {
     const r = this.deps.config.retention;
-    if (!boss.whatsappOptIn) return "no_whatsapp_opt_in";
+    // WhatsApp requires explicit opt-in; on Telegram the Boss started the bot and linked it themselves.
+    if (via === "whatsapp" && !boss.whatsappOptIn) return "no_whatsapp_opt_in";
     if (state.optedOut) return "opted_out";
     if (state.mode !== "bot") return "human_handoff_active";
     if (inQuietHours(localHour, r.quietHoursStart, r.quietHoursEnd)) return "quiet_hours";
@@ -245,10 +255,10 @@ export class RetentionEngine {
     return { blocked: reason };
   }
 
-  private async deliver(c: Candidate, ctx: ContentCtx, channel: Channel, now: Date): Promise<string | null> {
+  private async deliver(c: Candidate, ctx: ContentCtx, to: string, channel: Channel, now: Date): Promise<string | null> {
     const { store, messenger, config, logger } = this.deps;
     const { message, text } = renderNudge(c.template, ctx, channel, config.whatsapp.templateLanguage);
-    const { messageId } = await messenger.send(ctx.boss.phone, message);
+    const { messageId } = await messenger.send(to, message);
     await store.recordNudge({
       bossId: ctx.boss.id,
       trigger: c.trigger.id,

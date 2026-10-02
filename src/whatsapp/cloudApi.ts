@@ -63,6 +63,9 @@ export function toCloudPayload(message: OutboundMessage): Record<string, unknown
   switch (message.kind) {
     case "text":
       return { type: "text", text: { body: clip(message.text, LIMITS.textBody), preview_url: message.previewUrl ?? false } };
+    case "contact_request":
+      // Telegram-only concept; on WhatsApp we already know the number.
+      return { type: "text", text: { body: clip(message.body, LIMITS.textBody), preview_url: false } };
     case "buttons":
       return {
         type: "interactive",

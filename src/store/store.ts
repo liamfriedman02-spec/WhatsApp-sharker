@@ -21,9 +21,22 @@ export interface BossState {
   digest: DigestPref;
   mode: ConversationMode;
   flow: Flow | null;
+  /** Last message from the Boss on any channel (engagement, "is chatting"). */
   lastInboundAt: string | null;
+  /** Last WhatsApp message from the Boss (opens WhatsApp's 24h free-form window). */
+  waLastInboundAt: string | null;
+  /** Channel the Boss last used — proactive messages go there. */
+  channel: "whatsapp" | "telegram";
+  telegramChatId: string | null;
   handoffId: number | null;
   updatedAt: string;
+}
+
+export interface TelegramLink {
+  chatId: string;
+  bossId: string;
+  phone: string;
+  linkedAt: string;
 }
 
 export interface MessageRecord {
@@ -102,6 +115,9 @@ export interface Store {
   /** Snapshots for local dates >= sinceDate, oldest first. */
   snapshotsSince(bossId: string, sinceDate: string): Promise<StatSnapshot[]>;
 
+  getTelegramLink(chatId: string): Promise<TelegramLink | null>;
+  saveTelegramLink(link: TelegramLink): Promise<void>;
+
   close(): void;
 }
 
@@ -175,6 +191,12 @@ CREATE TABLE IF NOT EXISTS snapshots (
   json TEXT NOT NULL,
   PRIMARY KEY (boss_id, date)
 );
+CREATE TABLE IF NOT EXISTS telegram_links (
+  chat_id TEXT PRIMARY KEY,
+  boss_id TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  linked_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS processed (
   kind TEXT NOT NULL,
   id TEXT NOT NULL,
@@ -193,6 +215,19 @@ export class SqliteStore implements Store {
     this.db = new DatabaseSync(path);
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec(SCHEMA);
+    // Columns added after the first release (existing databases are upgraded in place).
+    this.addColumns("boss_state", {
+      wa_last_inbound_at: "TEXT",
+      channel: "TEXT NOT NULL DEFAULT 'whatsapp'",
+      telegram_chat_id: "TEXT",
+    });
+  }
+
+  private addColumns(table: string, columns: Record<string, string>): void {
+    const existing = new Set((this.db.prepare(`PRAGMA table_info(${table})`).all() as Row[]).map((r) => String(r.name)));
+    for (const [name, def] of Object.entries(columns)) {
+      if (!existing.has(name)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${def}`);
+    }
   }
 
   async getState(bossId: string, phone: string): Promise<BossState> {
@@ -206,6 +241,9 @@ export class SqliteStore implements Store {
         mode: "bot",
         flow: null,
         lastInboundAt: null,
+        waLastInboundAt: null,
+        channel: "whatsapp",
+        telegramChatId: null,
         handoffId: null,
         updatedAt: new Date().toISOString(),
       };
@@ -218,6 +256,9 @@ export class SqliteStore implements Store {
       mode: row.mode as ConversationMode,
       flow: row.flow_json ? (JSON.parse(String(row.flow_json)) as Flow) : null,
       lastInboundAt: (row.last_inbound_at as string | null) ?? null,
+      waLastInboundAt: (row.wa_last_inbound_at as string | null) ?? null,
+      channel: row.channel === "telegram" ? "telegram" : "whatsapp",
+      telegramChatId: (row.telegram_chat_id as string | null) ?? null,
       handoffId: row.handoff_id === null || row.handoff_id === undefined ? null : Number(row.handoff_id),
       updatedAt: String(row.updated_at),
     };
@@ -226,12 +267,14 @@ export class SqliteStore implements Store {
   async saveState(s: BossState): Promise<void> {
     this.db
       .prepare(
-        `INSERT INTO boss_state (boss_id, phone, opted_out, digest, mode, flow_json, last_inbound_at, handoff_id, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO boss_state (boss_id, phone, opted_out, digest, mode, flow_json, last_inbound_at, wa_last_inbound_at,
+                                 channel, telegram_chat_id, handoff_id, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(boss_id) DO UPDATE SET
            phone = excluded.phone, opted_out = excluded.opted_out, digest = excluded.digest, mode = excluded.mode,
            flow_json = excluded.flow_json, last_inbound_at = excluded.last_inbound_at,
-           handoff_id = excluded.handoff_id, updated_at = excluded.updated_at`,
+           wa_last_inbound_at = excluded.wa_last_inbound_at, channel = excluded.channel,
+           telegram_chat_id = excluded.telegram_chat_id, handoff_id = excluded.handoff_id, updated_at = excluded.updated_at`,
       )
       .run(
         s.bossId,
@@ -241,6 +284,9 @@ export class SqliteStore implements Store {
         s.mode,
         s.flow ? JSON.stringify(s.flow) : null,
         s.lastInboundAt,
+        s.waLastInboundAt,
+        s.channel,
+        s.telegramChatId,
         s.handoffId,
         s.updatedAt,
       );
@@ -405,6 +451,22 @@ export class SqliteStore implements Store {
       .prepare("SELECT json FROM snapshots WHERE boss_id = ? AND date >= ? ORDER BY date ASC")
       .all(bossId, sinceDate) as Row[];
     return rows.map((r) => JSON.parse(String(r.json)) as StatSnapshot);
+  }
+
+  async getTelegramLink(chatId: string): Promise<TelegramLink | null> {
+    const row = this.db.prepare("SELECT * FROM telegram_links WHERE chat_id = ?").get(chatId) as Row | undefined;
+    return row
+      ? { chatId: String(row.chat_id), bossId: String(row.boss_id), phone: String(row.phone), linkedAt: String(row.linked_at) }
+      : null;
+  }
+
+  async saveTelegramLink(link: TelegramLink): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO telegram_links (chat_id, boss_id, phone, linked_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(chat_id) DO UPDATE SET boss_id = excluded.boss_id, phone = excluded.phone, linked_at = excluded.linked_at`,
+      )
+      .run(link.chatId, link.bossId, link.phone, link.linkedAt);
   }
 
   close(): void {

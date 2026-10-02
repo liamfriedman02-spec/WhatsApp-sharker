@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 const bool = (fallback: boolean) =>
@@ -26,6 +27,16 @@ const EnvSchema = z.object({
   WHATSAPP_TEMPLATE_LANGUAGE: z.string().default("en"),
   /** Log outbound messages instead of calling the Cloud API. */
   WHATSAPP_DRY_RUN: bool(false),
+
+  // Telegram (optional second channel)
+  TELEGRAM_BOT_TOKEN: optionalString,
+  /** Secret Telegram sends with every webhook call; derived from the token when not set. */
+  TELEGRAM_WEBHOOK_SECRET: optionalString,
+  /** auto = webhook when a public URL is known, otherwise long polling (local dev). */
+  TELEGRAM_MODE: z.enum(["auto", "webhook", "polling"]).default("auto"),
+  /** Public HTTPS base URL of this server (Render sets RENDER_EXTERNAL_URL automatically). */
+  PUBLIC_URL: optionalString,
+  RENDER_EXTERNAL_URL: optionalString,
 
   // Claude (free-text support assistant)
   ANTHROPIC_API_KEY: optionalString,
@@ -78,6 +89,12 @@ export interface Config {
     templateLanguage: string;
     dryRun: boolean;
   };
+  telegram: {
+    botToken?: string;
+    webhookSecret: string;
+    mode: "webhook" | "polling";
+  };
+  publicUrl?: string;
   ai: {
     enabled: boolean;
     apiKey?: string;
@@ -117,6 +134,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     throw new Error(`Invalid configuration:\n${issues}`);
   }
   const e = parsed.data;
+  const publicUrl = (e.PUBLIC_URL ?? e.RENDER_EXTERNAL_URL)?.replace(/\/+$/, "");
   const config: Config = {
     env: e.NODE_ENV,
     port: e.PORT,
@@ -131,6 +149,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       templateLanguage: e.WHATSAPP_TEMPLATE_LANGUAGE,
       dryRun: e.WHATSAPP_DRY_RUN || !e.WHATSAPP_ACCESS_TOKEN || !e.WHATSAPP_PHONE_NUMBER_ID,
     },
+    telegram: {
+      botToken: e.TELEGRAM_BOT_TOKEN,
+      webhookSecret:
+        e.TELEGRAM_WEBHOOK_SECRET ??
+        createHash("sha256").update(`telegram-webhook:${e.TELEGRAM_BOT_TOKEN ?? ""}`).digest("hex").slice(0, 48),
+      mode: e.TELEGRAM_MODE === "auto" ? (publicUrl ? "webhook" : "polling") : e.TELEGRAM_MODE,
+    },
+    publicUrl,
     ai: {
       enabled: e.AI_ASSISTANT_ENABLED,
       apiKey: e.ANTHROPIC_API_KEY,
@@ -165,10 +191,13 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
 
   if (config.env === "production") {
     const missing: string[] = [];
-    if (!config.whatsapp.accessToken) missing.push("WHATSAPP_ACCESS_TOKEN");
-    if (!config.whatsapp.phoneNumberId) missing.push("WHATSAPP_PHONE_NUMBER_ID");
-    if (!config.whatsapp.verifyToken) missing.push("WHATSAPP_VERIFY_TOKEN");
-    if (!config.whatsapp.appSecret) missing.push("WHATSAPP_APP_SECRET");
+    const whatsapp = !!config.whatsapp.accessToken;
+    if (!whatsapp && !config.telegram.botToken) missing.push("WHATSAPP_ACCESS_TOKEN or TELEGRAM_BOT_TOKEN");
+    if (whatsapp) {
+      if (!config.whatsapp.phoneNumberId) missing.push("WHATSAPP_PHONE_NUMBER_ID");
+      if (!config.whatsapp.verifyToken) missing.push("WHATSAPP_VERIFY_TOKEN");
+      if (!config.whatsapp.appSecret) missing.push("WHATSAPP_APP_SECRET");
+    }
     if (!config.sharker.apiBaseUrl) missing.push("SHARKER_API_BASE_URL");
     if (!config.sharker.webhookSecret) missing.push("SHARKER_WEBHOOK_SECRET");
     if (!config.adminApiKey) missing.push("ADMIN_API_KEY");

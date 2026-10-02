@@ -1,5 +1,6 @@
 # One-click deploy on Render: New → Blueprint → pick this repo.
 # Values marked `sync: false` are asked for in the Render dashboard (secrets never live in git).
+# Leave a channel's values empty if you don't use it (WhatsApp, Telegram or both).
 services:
   - type: web
     name: sharker-boss-coach
@@ -25,6 +26,10 @@ services:
         generateValue: true
       - key: ADMIN_API_KEY
         generateValue: true
+      # Telegram bot token from @BotFather (optional; leave empty for WhatsApp only).
+      # The webhook is registered automatically on Render's public URL.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
       # Your WhatsApp number (international format, digits only) → chats as a demo Boss.
       - key: DEMO_BOSS_PHONE
         sync: false

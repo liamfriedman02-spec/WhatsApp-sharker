@@ -1,6 +1,6 @@
-# Sharker Boss WhatsApp Coach
+# Sharker Boss Coach (WhatsApp + Telegram)
 
-A WhatsApp coach for every Sharker **Boss**. It knows their numbers, sets goals with them, gives them one
+A WhatsApp and Telegram coach for every Sharker **Boss**. It knows their numbers, sets goals with them, gives them one
 concrete mission a day, tracks their progress and pushes them to grow. It's their personal business
 coach, not an FAQ bot.
 
@@ -52,6 +52,17 @@ Requires Node ≥ 22.13 (it uses the built-in `node:sqlite`).
 | ✍️ **Post writer** | "Write me a post" returns 3 ready-to-post texts (WhatsApp status, Instagram, TikTok) with the brand link, written by Claude and tailored to what the coach knows. Without AI it uses built-in texts. |
 | 💪 **Intensity** | The Boss chooses **🔥 Push me hard** (daily missions), **💪 Standard** (missions Tue/Thu plus weekly coaching) or **🌿 Light touch** (weekly coaching only). |
 
+## Channels
+
+| | WhatsApp | Telegram |
+|---|---|---|
+| Setup | Meta app + webhook ([guide](docs/whatsapp-setup.md)) | @BotFather token ([guide](docs/telegram-setup.md)) |
+| Who is the Boss? | The sender's phone number | The Boss shares their own number once (📱 button); the chat is linked to that Boss |
+| Buttons | Reply buttons, lists, link buttons | Inline keyboards |
+| Proactive messages | Approved templates outside the 24h window; WhatsApp opt-in required | Always the interactive version; free, no window |
+
+Proactive coaching follows the Boss to the app they used last.
+
 ## How it works
 
 ```
@@ -78,6 +89,8 @@ Requires Node ≥ 22.13 (it uses the built-in `node:sqlite`).
 | `src/retention/` | Triggers, frequency caps and the 24h-window channel choice (`engine.ts`, `triggers.ts`). |
 | `src/platform/` | Sharker API client plus the in-memory demo platform (with demo history). |
 | `src/whatsapp/` | Cloud API client, webhook parsing, signature checks, message-limit validation. |
+| `src/telegram/` | Telegram Bot API client, HTML formatting, update parsing, webhook/polling runtime. |
+| `src/channels.ts` | Addresses (`5511…` = WhatsApp, `tg:123…` = Telegram) and routing messages to the right channel. |
 
 ### Conversation map
 
@@ -129,10 +142,11 @@ Preview any Boss without sending anything: `GET /admin/retention/preview/{bossId
 
 1. **Sharker platform**: implement the read API and events webhook in [`docs/platform-api.md`](docs/platform-api.md), and collect `whatsappOptIn` during Boss onboarding. Add `brandUrl` so posts include the real link.
 2. **Meta**: follow [`docs/whatsapp-setup.md`](docs/whatsapp-setup.md). You create the Meta app, fill in `.env` and point the webhook at `https://<host>/webhooks/whatsapp`. Before the Sharker API exists, `DEMO_BOSS_PHONE` lets you chat as a demo Boss from your own phone.
-3. **Templates**: run `npm run templates:export` to print all 27 proactive messages as Meta template payloads (`-- --submit` submits them). They must be approved before they can be sent outside the 24h window.
-4. **Content & tuning**: the copy in `src/content/` is a first draft. The Sharker team must verify every factual statement (earnings, payouts, GCOIN, Boss Hub section names), the Boss Hub paths in `links.ts`, the level thresholds in `levels.ts`, and the mission list in `missions.ts`.
-5. **Config**: copy `.env.example` to `.env`. In production the app refuses to start without the WhatsApp, Sharker and admin secrets.
-6. **Human support**: set `SUPPORT_WEBHOOK_URL` to receive `handoff.opened` / `handoff.message` / `handoff.closed` events. Agents reply with the admin API:
+3. **Telegram (optional)**: create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN` ([`docs/telegram-setup.md`](docs/telegram-setup.md)). On Render the webhook registers itself.
+4. **Templates**: run `npm run templates:export` to print all 27 proactive messages as Meta template payloads (`-- --submit` submits them). They must be approved before they can be sent outside the 24h window.
+5. **Content & tuning**: the copy in `src/content/` is a first draft. The Sharker team must verify every factual statement (earnings, payouts, GCOIN, Boss Hub section names), the Boss Hub paths in `links.ts`, the level thresholds in `levels.ts`, and the mission list in `missions.ts`.
+6. **Config**: copy `.env.example` to `.env`. In production the app refuses to start without at least one channel (WhatsApp or Telegram) and the Sharker and admin secrets.
+7. **Human support**: set `SUPPORT_WEBHOOK_URL` to receive `handoff.opened` / `handoff.message` / `handoff.closed` events. Agents reply with the admin API:
 
 ```bash
 curl -X POST https://<host>/admin/handoffs/12/reply -H "Authorization: Bearer $ADMIN_API_KEY" \

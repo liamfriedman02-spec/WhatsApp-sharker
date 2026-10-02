@@ -294,3 +294,24 @@ function capitalizeFirst(s: string): string {
 function truncate(s: string, max: number): string {
   return s.length <= max ? s : s.slice(0, max - 1) + "…";
 }
+
+export function telegramLinkRequest(name: string | undefined, retry = false): OutboundMessage {
+  return {
+    kind: "contact_request",
+    body: retry
+      ? "Please use the button below to share *your own* phone number (the one in your Boss Hub profile)."
+      : `👋 Hi${name ? ` ${name}` : ""}! I'm the *Sharker Boss Coach*.\n\nTo connect you to your Boss account, tap the button below to share your phone number — the one in your Boss Hub profile.`,
+    buttonLabel: "📱 Share my phone number",
+  };
+}
+
+export function telegramLinkedMessage(boss: { firstName: string; brandName: string }): OutboundMessage {
+  return { kind: "text", text: `✅ Connected! Welcome, ${boss.firstName} — I'm your coach for *${boss.brandName}*.` };
+}
+
+export function telegramNotABossMessage(): OutboundMessage {
+  return {
+    kind: "text",
+    text: "I couldn't find a Boss account with that phone number. Make sure it's the number in your Boss Hub profile, or contact Sharker support.",
+  };
+}

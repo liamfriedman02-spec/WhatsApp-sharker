@@ -2,6 +2,7 @@ import type { Assistant, AssistantAnswer, CoachActions } from "../ai/assistant.j
 import { formatAmount } from "../coach/goals.js";
 import type { CoachService, CoachView } from "../coach/service.js";
 import type { CoachIntensity } from "../coach/types.js";
+import { bossAddress, telegramAddress } from "../channels.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
 import { getFaq, type FaqCategoryId, FAQ_CATEGORIES } from "../content/faq.js";
@@ -43,6 +44,9 @@ import {
   mainMenu,
   notABossMessage,
   settingsMenu,
+  telegramLinkRequest,
+  telegramLinkedMessage,
+  telegramNotABossMessage,
   topicMessages,
   unsupportedMessage,
 } from "./views.js";
@@ -56,6 +60,8 @@ export interface RouterDeps {
   coach: CoachService;
   config: Config;
   logger: Logger;
+  /** Whether Telegram is configured (replies to support agents etc. may go there). */
+  telegramEnabled?: boolean;
   now?: () => Date;
 }
 
@@ -65,13 +71,15 @@ interface Turn {
   state: BossState;
   ctx: ContentCtx;
   coach: CoachView;
+  /** Where replies go: the address the message came from (WhatsApp number or "tg:<chat>"). */
+  address: string;
   outbox: { message: OutboundMessage; source: string }[];
 }
 
 const AI_ANSWERS_PER_HOUR = 30;
 
 /**
- * Handles every inbound WhatsApp message: menus and button taps (deterministic, instant),
+ * Handles every inbound message (WhatsApp or Telegram): menus and button taps (deterministic, instant),
  * coaching (missions, goals, progress, posts), step-by-step guides, human handoff, and free
  * text (the Claude coach, with keyword search fallback).
  */
@@ -85,30 +93,37 @@ export class BotRouter {
   }
 
   async handleInbound(msg: InboundMessage): Promise<void> {
-    const { store, platform, messenger, logger, config } = this.deps;
+    const { store, messenger, logger, config } = this.deps;
     if (!(await store.markProcessed("message", msg.messageId))) return; // webhook retry
-    void messenger.markRead(msg.messageId);
-
-    const boss = await platform.getBossByPhone(msg.from);
-    if (!boss) {
-      logger.info("inbound from unknown number", { from: maskPhone(msg.from) });
-      await messenger.send(msg.from, notABossMessage());
-      return;
-    }
+    const channel = msg.channel ?? "whatsapp";
+    const address = channel === "telegram" ? telegramAddress(msg.from) : msg.from;
+    void messenger.markRead(msg.messageId, address);
 
     const now = this.now();
+    const found = channel === "telegram" ? await this.telegramBoss(msg, address, now) : await this.whatsappBoss(msg);
+    if (!found) return;
+    const { boss, justLinked } = found;
+
     const state = await store.getState(boss.id, boss.phone);
     state.phone = boss.phone;
     state.lastInboundAt = now.toISOString();
+    state.channel = channel; // proactive messages follow the Boss to the channel they use
+    if (channel === "telegram") state.telegramChatId = msg.from;
+    else state.waLastInboundAt = now.toISOString();
     const ctx = contentCtx(boss, { now, hubUrl: config.sharker.bossHubUrl, defaultTimezone: config.retention.defaultTimezone });
     // Loading the coach view also records today's stats snapshot for week-over-week insights.
     const coach = await this.deps.coach.view(ctx);
     ctx.coach = coach;
-    const turn: Turn = { boss, state, ctx, coach, outbox: [] };
+    const turn: Turn = { boss, state, ctx, coach, address, outbox: [] };
 
     await store.logMessage(boss.id, "in", describeInbound(msg), "boss", now);
     try {
-      await this.dispatch(turn, msg);
+      if (justLinked) {
+        this.push(turn, telegramLinkedMessage(boss));
+        this.push(turn, mainMenu(ctx));
+      } else {
+        await this.dispatch(turn, msg);
+      }
     } catch (err) {
       logger.error("router: failed to handle message", { bossId: boss.id, err });
       turn.outbox = [];
@@ -123,10 +138,49 @@ export class BotRouter {
     await this.flush(turn);
   }
 
+  // ── Who is writing? ───────────────────────────────────────────────────────
+
+  private async whatsappBoss(msg: InboundMessage): Promise<{ boss: BossProfile; justLinked: boolean } | null> {
+    const boss = await this.deps.platform.getBossByPhone(msg.from);
+    if (boss) return { boss, justLinked: false };
+    this.deps.logger.info("inbound from unknown number", { from: maskPhone(msg.from) });
+    await this.deps.messenger.send(msg.from, notABossMessage());
+    return null;
+  }
+
+  /**
+   * Telegram doesn't reveal phone numbers, so the first time a Boss writes we ask them to
+   * share theirs (Telegram's "share my phone number" button, verified to be their own) and
+   * link the chat to the Boss with that number.
+   */
+  private async telegramBoss(msg: InboundMessage, address: string, now: Date): Promise<{ boss: BossProfile; justLinked: boolean } | null> {
+    const { store, platform, messenger, logger } = this.deps;
+    const link = await store.getTelegramLink(msg.from);
+    if (link) {
+      const boss = (await platform.getBossByPhone(link.phone)) ?? (await platform.getBoss(link.bossId));
+      if (boss) return { boss, justLinked: false };
+    }
+    if (msg.type === "contact" && msg.contactPhone) {
+      const boss = await platform.getBossByPhone(msg.contactPhone);
+      if (!boss) {
+        logger.info("telegram: no Boss for shared number", { phone: maskPhone(msg.contactPhone) });
+        await messenger.send(address, telegramNotABossMessage());
+        return null;
+      }
+      await store.saveTelegramLink({ chatId: msg.from, bossId: boss.id, phone: boss.phone, linkedAt: now.toISOString() });
+      logger.info("telegram: chat linked to Boss", { bossId: boss.id });
+      return { boss, justLinked: true };
+    }
+    await messenger.send(address, telegramLinkRequest(msg.profileName, msg.type === "contact"));
+    return null;
+  }
+
   // ── Dispatch ──────────────────────────────────────────────────────────────
 
   private async dispatch(t: Turn, msg: InboundMessage): Promise<void> {
     await this.expireStaleHandoff(t);
+
+    if (msg.type === "contact") return this.push(t, mainMenu(t.ctx)); // already linked
 
     if (msg.type === "unsupported") {
       if (t.state.mode === "human") return this.forwardToHuman(t, `[Boss sent a ${msg.rawType ?? "non-text"} message]`);
@@ -692,9 +746,9 @@ export class BotRouter {
     const handoff = await store.getHandoff(handoffId);
     if (!handoff || handoff.status !== "open") throw new Error(`Handoff ${handoffId} is not open`);
     const body = agentName ? `*${agentName} (Sharker Support):*\n${text}` : `*Sharker Support:*\n${text}`;
-    await messenger.send(handoff.phone, { kind: "text", text: body });
-    await store.logMessage(handoff.bossId, "out", body, "human_agent", this.now());
     const state = await store.getState(handoff.bossId, handoff.phone);
+    await messenger.send(bossAddress(state, handoff.phone, !!this.deps.telegramEnabled), { kind: "text", text: body });
+    await store.logMessage(handoff.bossId, "out", body, "human_agent", this.now());
     state.mode = "human";
     state.handoffId = handoff.id;
     state.updatedAt = this.now().toISOString(); // keeps the handoff alive
@@ -715,7 +769,7 @@ export class BotRouter {
       await store.saveState(state);
     }
     const body = `✅ Your support request *#${handoffId}* is closed. Anything else? Reply *MENU* anytime.`;
-    await messenger.send(handoff.phone, { kind: "text", text: body });
+    await messenger.send(bossAddress(state, handoff.phone, !!this.deps.telegramEnabled), { kind: "text", text: body });
     await store.logMessage(handoff.bossId, "out", body, "bot", this.now());
     const boss = await platform.getBoss(handoff.bossId);
     const resolved = (await store.getHandoff(handoffId))!;
@@ -736,7 +790,7 @@ export class BotRouter {
   private async flush(t: Turn): Promise<void> {
     for (const { message, source } of t.outbox) {
       try {
-        await this.deps.messenger.send(t.boss.phone, message);
+        await this.deps.messenger.send(t.address, message);
         await this.deps.store.logMessage(t.boss.id, "out", renderMessage(message).slice(0, 1000), source, this.now());
       } catch (err) {
         this.deps.logger.error("router: send failed", { bossId: t.boss.id, err });

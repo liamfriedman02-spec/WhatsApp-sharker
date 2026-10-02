@@ -69,7 +69,7 @@ function allViews(): OutboundMessage[] {
   for (const digest of ["daily", "weekly", "off"] as const) {
     for (const optedOut of [true, false]) {
       for (const intensity of ["light", "standard", "intense"] as const) {
-        out.push(settingsMenu({ bossId: "b", phone: "1", optedOut, digest, mode: "bot", flow: null, lastInboundAt: null, handoffId: null, updatedAt: "" }, intensity));
+        out.push(settingsMenu({ bossId: "b", phone: "1", optedOut, digest, mode: "bot", flow: null, lastInboundAt: null, waLastInboundAt: null, channel: "whatsapp", telegramChatId: null, handoffId: null, updatedAt: "" }, intensity));
       }
     }
   }

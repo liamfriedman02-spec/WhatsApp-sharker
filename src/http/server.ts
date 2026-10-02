@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { App } from "../app.js";
 import type { PlatformEvent } from "../platform/types.js";
 import { KeyedQueue } from "../util/keyedQueue.js";
+import { handleTelegramUpdate } from "../telegram/runtime.js";
+import type { TgUpdate } from "../telegram/updates.js";
 import { parseWebhook, verifySignature } from "../whatsapp/webhook.js";
 
 type RawRequest = Request & { rawBody?: Buffer };
@@ -41,7 +43,7 @@ export function createHttpServer(app: App): { http: express.Express; queue: Keye
   );
 
   http.get("/health", (_req, res) => {
-    res.json({ ok: true, dryRun: config.whatsapp.dryRun, ai: !!app.assistant });
+    res.json({ ok: true, dryRun: config.whatsapp.dryRun, telegram: !!app.telegramApi, ai: !!app.assistant });
   });
 
   // ── WhatsApp Cloud API webhook ────────────────────────────────────────────
@@ -76,6 +78,24 @@ export function createHttpServer(app: App): { http: express.Express; queue: Keye
     for (const s of statuses) {
       if (s.status === "failed") logger.warn("whatsapp delivery failed", { messageId: s.messageId, errors: s.errors });
     }
+  });
+
+  // ── Telegram Bot API webhook ─────────────────────────────────────────────
+  http.post("/webhooks/telegram", (req: RawRequest, res) => {
+    const api = app.telegramApi;
+    if (!api) {
+      res.sendStatus(404);
+      return;
+    }
+    const given = Buffer.from(req.header("x-telegram-bot-api-secret-token") ?? "");
+    const expected = Buffer.from(config.telegram.webhookSecret);
+    if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
+      logger.warn("telegram webhook: bad secret");
+      res.sendStatus(401);
+      return;
+    }
+    res.sendStatus(200); // acknowledge first; Telegram retries slow webhooks
+    void handleTelegramUpdate(req.body as TgUpdate, { api, router, queue, logger });
   });
 
   // ── Sharker platform events (real-time retention triggers) ───────────────

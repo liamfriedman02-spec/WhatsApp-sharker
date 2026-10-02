@@ -68,7 +68,7 @@ export const NUDGES = {
     category: "UTILITY",
     body:
       "👋 *Welcome to your Boss Assistant, {{1}}!*\n\n" +
-      "I'm here on WhatsApp to help you grow *{{2}}*:\n" +
+      "I'm your coach, right here in this chat, to help you grow *{{2}}*:\n" +
       "🎓 Learn how your business works\n" +
       "💬 Get help anytime\n" +
       "📊 Follow your players and earnings\n" +

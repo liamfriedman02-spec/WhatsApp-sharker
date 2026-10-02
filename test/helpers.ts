@@ -78,6 +78,8 @@ export function textOf(m: OutboundMessage | undefined): string {
   switch (m.kind) {
     case "text":
       return m.text;
+    case "contact_request":
+      return `${m.body}\n${m.buttonLabel}`;
     case "buttons":
       return `${m.body}\n${m.buttons.map((b) => `${b.id} ${b.title}`).join("\n")}`;
     case "list":

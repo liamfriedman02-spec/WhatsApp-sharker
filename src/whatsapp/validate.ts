@@ -15,6 +15,9 @@ export function validateMessage(m: OutboundMessage): string[] {
     case "text":
       check(m.text.length > 0 && m.text.length <= LIMITS.textBody, `text length ${m.text.length}`);
       break;
+    case "contact_request":
+      check(m.body.length > 0 && m.body.length <= LIMITS.textBody, `body length ${m.body.length}`);
+      break;
     case "buttons":
       headerFooter(m.header, m.footer);
       check(m.body.length <= LIMITS.interactiveBody, `body too long (${m.body.length})`);
@@ -22,7 +25,7 @@ export function validateMessage(m: OutboundMessage): string[] {
       check(new Set(m.buttons.map((b) => b.id)).size === m.buttons.length, "duplicate button ids");
       for (const b of m.buttons) {
         check(b.title.length <= LIMITS.buttonTitle, `button title too long (${b.title.length}): ${b.title}`);
-        check(b.id.length <= LIMITS.buttonId, `button id too long: ${b.id}`);
+        check(Buffer.byteLength(b.id) <= LIMITS.telegramCallbackData, `button id too long for Telegram: ${b.id}`);
       }
       break;
     case "list": {
@@ -36,7 +39,7 @@ export function validateMessage(m: OutboundMessage): string[] {
       for (const r of rows) {
         check(r.title.length <= LIMITS.rowTitle, `row title too long (${r.title.length}): ${r.title}`);
         check(!r.description || r.description.length <= LIMITS.rowDescription, `row description too long (${r.description?.length}): ${r.description}`);
-        check(r.id.length <= LIMITS.rowId, `row id too long: ${r.id}`);
+        check(Buffer.byteLength(r.id) <= LIMITS.telegramCallbackData, `row id too long for Telegram: ${r.id}`);
       }
       break;
     }
