@@ -1,5 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { ClaudeAssistant, type Assistant } from "./ai/assistant.js";
+import type { Assistant } from "./ai/assistant.js";
+import { assistantLabel, createAssistant } from "./ai/factory.js";
 import { LogSupportDesk, WebhookSupportDesk, type SupportDesk } from "./bot/handoff.js";
 import { ChannelMessenger } from "./channels.js";
 import { CoachService } from "./coach/service.js";
@@ -63,16 +63,10 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
 
   let assistant: Assistant | null = null;
   if (overrides.assistant !== undefined) assistant = overrides.assistant;
-  else if (config.ai.enabled && config.ai.apiKey) {
-    assistant = new ClaudeAssistant({
-      client: new Anthropic({ apiKey: config.ai.apiKey }),
-      model: config.ai.model,
-      effort: config.ai.effort,
-      refusalFallback: config.ai.refusalFallback,
-      logger,
-    });
-  } else {
-    logger.warn("AI assistant disabled — free text uses keyword search over the knowledge base");
+  else {
+    assistant = createAssistant(config, logger);
+    if (assistant) logger.info("AI coach enabled", { model: assistantLabel(config) });
+    else logger.warn("AI coach disabled (set ANTHROPIC_API_KEY or OPENAI_API_KEY) — free text uses keyword search over the knowledge base");
   }
 
   const supportDesk =

@@ -1,3 +1,4 @@
+import { assistantLabel } from "./ai/factory.js";
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { createHttpServer } from "./http/server.js";
@@ -14,7 +15,7 @@ const server = http.listen(config.port, () => {
     port: config.port,
     dryRun: config.whatsapp.dryRun,
     telegram: app.telegramApi ? config.telegram.mode : "disabled",
-    ai: app.assistant ? config.ai.model : "disabled",
+    ai: app.assistant ? assistantLabel(config) : "disabled",
   });
 });
 

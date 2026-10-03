@@ -11,8 +11,7 @@
  *   /quit
  */
 import { createInterface } from "node:readline/promises";
-import Anthropic from "@anthropic-ai/sdk";
-import { ClaudeAssistant } from "../src/ai/assistant.js";
+import { assistantLabel, createAssistant } from "../src/ai/factory.js";
 import { createApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { NUDGES, fillTemplate, type NudgeTemplate } from "../src/content/nudges.js";
@@ -30,9 +29,7 @@ const platform = new InMemoryPlatform(demoBosses(clock));
 let options: { id: string; title: string }[] = [];
 
 const messenger = new RecordingMessenger((_to, m) => print(m));
-const assistant = config.ai.apiKey
-  ? new ClaudeAssistant({ client: new Anthropic({ apiKey: config.ai.apiKey }), model: config.ai.model, effort: config.ai.effort, refusalFallback: config.ai.refusalFallback, logger })
-  : null;
+const assistant = createAssistant(config, logger);
 const store = new SqliteStore(":memory:");
 for (const [bossId, snapshots] of Object.entries(demoHistory(clock))) {
   for (const snap of snapshots) void store.saveSnapshot(bossId, snap);
@@ -103,7 +100,7 @@ async function send(input: { text?: string; replyId?: string; replyTitle?: strin
 async function main() {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   console.log("Sharker Boss Assistant — simulator");
-  console.log(`AI assistant: ${assistant ? config.ai.model : "off (set ANTHROPIC_API_KEY to enable)"}`);
+  console.log(`AI coach: ${assistant ? assistantLabel(config) : "off (set ANTHROPIC_API_KEY or OPENAI_API_KEY to enable)"}`);
   console.log("Type a message, a number to tap an option, or /help.\n");
   console.log(`You are ${boss.firstName} (${boss.brandName}). Say "hi" to start.\n`);
 

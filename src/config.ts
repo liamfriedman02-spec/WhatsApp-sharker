@@ -38,12 +38,14 @@ const EnvSchema = z.object({
   PUBLIC_URL: optionalString,
   RENDER_EXTERNAL_URL: optionalString,
 
-  // Claude (free-text support assistant)
+  // AI coach: Claude (preferred) or OpenAI (used when ANTHROPIC_API_KEY is empty)
   ANTHROPIC_API_KEY: optionalString,
   CLAUDE_MODEL: z.string().default("claude-opus-5"),
   CLAUDE_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("low"),
   /** Server-side refusal fallback (Claude API). Disable for platforms/models without it. */
   CLAUDE_REFUSAL_FALLBACK: bool(true),
+  OPENAI_API_KEY: optionalString,
+  OPENAI_MODEL: z.string().default("gpt-5-mini"),
   AI_ASSISTANT_ENABLED: bool(true),
 
   // Sharker platform
@@ -97,10 +99,14 @@ export interface Config {
   publicUrl?: string;
   ai: {
     enabled: boolean;
+    /** Anthropic key (Claude). */
     apiKey?: string;
     model: string;
     effort: Env["CLAUDE_EFFORT"];
     refusalFallback: boolean;
+    /** OpenAI key, used when there's no Anthropic key. */
+    openaiApiKey?: string;
+    openaiModel: string;
   };
   sharker: {
     apiBaseUrl?: string;
@@ -163,6 +169,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       model: e.CLAUDE_MODEL,
       effort: e.CLAUDE_EFFORT,
       refusalFallback: e.CLAUDE_REFUSAL_FALLBACK,
+      openaiApiKey: e.OPENAI_API_KEY,
+      openaiModel: e.OPENAI_MODEL,
     },
     sharker: {
       apiBaseUrl: e.SHARKER_API_BASE_URL,

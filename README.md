@@ -30,7 +30,7 @@ Type `hi`, then type a number to tap a button. Try `sprint`, `texts`, `channels`
 - `/time +3d` moves the clock forward.
 - `/nudge` runs the proactive engine.
 
-Set `ANTHROPIC_API_KEY` to talk to the Claude coach.
+Set `ANTHROPIC_API_KEY` (Claude) or `OPENAI_API_KEY` (OpenAI) to talk to the AI coach.
 
 ```bash
 npm test                # content limits, conversations, coaching, retention rules, HTTP, Claude request shape
@@ -172,6 +172,7 @@ Other admin endpoints: `GET /admin/handoffs?status=open`, `POST /admin/retention
 - Structured output: `reply`, `cta`, `guide`, `escalate_to_human`, plus the coaching actions `set_goal`, `remember`, `follow_up_hours`/`follow_up_reason` and `mission_done`. Every action is validated before it's applied. The model picks buttons by id only, so it can never invent a URL.
 - The system prompt (coach persona, rules, full knowledge base) is identical for every Boss and is prompt-cached. The Boss's data, coach data and recent conversation go in the user turn.
 - The server-side refusal fallback (`fallbacks: "default"`) is on. Turn it off with `CLAUDE_REFUSAL_FALLBACK=false` for platforms or models that don't support it.
+- No Anthropic key? `OPENAI_API_KEY` runs the same coach (same prompts, schemas and validation) on OpenAI Chat Completions with a strict JSON schema; `OPENAI_MODEL` defaults to `gpt-5-mini`. The Anthropic key wins when both are set.
 - Refusals, errors and rate limits fall back to keyword search and built-in posts. Each Boss is limited to 30 AI calls per hour.
 
 ## Editing content

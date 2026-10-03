@@ -38,5 +38,8 @@ services:
       # Optional: enables the Claude coach and post writer.
       - key: ANTHROPIC_API_KEY
         sync: false
+      # Or an OpenAI key instead (used when ANTHROPIC_API_KEY is empty).
+      - key: OPENAI_API_KEY
+        sync: false
       - key: DATABASE_PATH
         value: ./data/sharker-bot.db

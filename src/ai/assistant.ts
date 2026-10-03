@@ -58,7 +58,7 @@ const GUIDE_IDS = Object.keys(GUIDES) as GuideId[];
 
 // cta/guide/metric are plain strings validated below: the structured-output transform can't
 // enforce enums, and an unknown value should drop that part — not throw away a good reply.
-const AnswerSchema = z.object({
+export const AnswerSchema = z.object({
   reply: z.string().describe("The WhatsApp reply to send to the Boss."),
   cta: z.string().describe(`Boss Hub button to attach. One of: none, ${CTA_IDS.join(", ")}.`),
   guide: z.string().describe(`Step-by-step guide to offer. One of: none, ${GUIDE_IDS.join(", ")}.`),
@@ -77,16 +77,53 @@ const AnswerSchema = z.object({
   buttons: z.array(z.string()).describe(`Up to 3 button ids to show under the reply, most useful first — the Boss's likely next taps. One of: ${QUICK_BUTTON_IDS.join(", ")}.`),
 });
 
-const PostsSchema = z.object({
+export const PostsSchema = z.object({
   posts: z.array(z.string()).describe("Exactly 3 ready-to-post texts."),
 });
 
-const InviteSchema = z.object({
+export const InviteSchema = z.object({
   text: z.string().describe("The invitation message, ready to forward."),
 });
 
+export type AnswerOutput = z.infer<typeof AnswerSchema>;
+
 const isCta = (v: string): v is CtaId => (CTA_IDS as string[]).includes(v);
 const isGuide = (v: string): v is GuideId => (GUIDE_IDS as string[]).includes(v);
+
+/** Validates the model's structured output into an answer (shared by every provider); null when the reply is empty. */
+export function toAnswer(out: AnswerOutput): AssistantAnswer | null {
+  if (out.reply.trim() === "") return null;
+  const metric = out.set_goal.metric;
+  const goalOk = (metric === "players" || metric === "earnings") && out.set_goal.target > 0 && out.set_goal.target <= 10_000_000;
+  const followOk = out.follow_up_hours >= 1 && out.follow_up_hours <= 168 && out.follow_up_reason.trim() !== "";
+  return {
+    reply: out.reply.trim(),
+    cta: isCta(out.cta) ? out.cta : null,
+    guide: isGuide(out.guide) ? out.guide : null,
+    escalate: out.escalate_to_human,
+    buttons: [...new Set(out.buttons.filter(isQuickButton))].slice(0, 3),
+    actions: {
+      setGoal: goalOk ? { metric: metric as GoalMetric, target: out.set_goal.target, days: Math.min(Math.max(out.set_goal.days, 3), 90) } : null,
+      remember: out.remember.map((r) => r.trim()).filter(Boolean).slice(0, 5),
+      followUp: followOk ? { hours: out.follow_up_hours, reason: out.follow_up_reason.trim() } : null,
+      missionDone: out.mission_done,
+    },
+  };
+}
+
+/** The user turn for the post writer. */
+export function postsRequest(ctx: ContentCtx, request?: string): string {
+  const notes = ctx.coach?.state.notes.map((n) => `- ${n.text}`).join("\n");
+  return [`Brand: ${ctx.boss.brandName}`, `Boss: ${ctx.boss.firstName}`, notes ? `What we know about the Boss:\n${notes}` : null, request ? `The Boss's request: ${request}` : null]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** The user turn for the invite writer. */
+export function inviteRequest(ctx: ContentCtx, audience: string): string {
+  const notes = ctx.coach?.state.notes.map((n) => `- ${n.text}`).join("\n");
+  return [`Brand: ${ctx.boss.brandName}`, `Boss: ${ctx.boss.firstName}`, `Audience: ${audience}`, notes ? `What we know about the Boss:\n${notes}` : null].filter(Boolean).join("\n");
+}
 
 const PLAYBOOK_NOTES = PLAYBOOKS.map((p) => `- ${p.id}: ${p.title} (${p.steps.length} days) — ${p.description}`).join("\n");
 const CHANNEL_NOTES = CHANNELS.map((c) => `- ${c.id}: ${c.name} — ${c.why}${c.guide ? ` (guide ${c.guide})` : ""}`).join("\n");
@@ -134,7 +171,7 @@ Fields
 KNOWLEDGE BASE
 ${buildKnowledgeBase()}`;
 
-const INVITE_PROMPT = `You write one personal invitation message a Sharker Boss sends to people they know, inviting them to join the Boss's own brand (players join through the Boss's link).
+export const INVITE_PROMPT = `You write one personal invitation message a Sharker Boss sends to people they know, inviting them to join the Boss's own brand (players join through the Boss's link).
 
 - First person, in the Boss's voice: warm, short (under 450 characters), one emoji or two. It reads like a real message to a real person, not an ad.
 - Fit the audience described (family, friends, colleagues, a group, followers, or whatever the Boss said) and use what you know about the Boss.
@@ -142,7 +179,7 @@ const INVITE_PROMPT = `You write one personal invitation message a Sharker Boss 
 - Honest: never promise money, winnings, bonuses or results; no claims about the platform you weren't given; no pressure tactics.
 - Write in the language of the audience description (English if unclear).`;
 
-const POSTS_PROMPT = `You write short social posts for Sharker Bosses to promote their own brand (players join the brand through the Boss's link).
+export const POSTS_PROMPT = `You write short social posts for Sharker Bosses to promote their own brand (players join the brand through the Boss's link).
 
 Write exactly 3 ready-to-post texts: 1) a WhatsApp status, 2) an Instagram caption, 3) a TikTok caption.
 - Short, warm, energetic, first person, in the Boss's voice. Emojis welcome. Put {link} where the brand link goes (at most once per post).
@@ -193,8 +230,8 @@ export class ClaudeAssistant implements Assistant {
         logger.warn("assistant: refusal", { bossId: input.ctx.boss.id, category: response.stop_details?.category });
         return null;
       }
-      const out = response.parsed_output;
-      if (!out || out.reply.trim() === "") {
+      const out = response.parsed_output ? toAnswer(response.parsed_output) : null;
+      if (!out) {
         logger.warn("assistant: no parsed output", { bossId: input.ctx.boss.id, stop: response.stop_reason });
         return null;
       }
@@ -204,22 +241,7 @@ export class ClaudeAssistant implements Assistant {
         input: response.usage.input_tokens,
         output: response.usage.output_tokens,
       });
-      const metric = out.set_goal.metric;
-      const goalOk = (metric === "players" || metric === "earnings") && out.set_goal.target > 0 && out.set_goal.target <= 10_000_000;
-      const followOk = out.follow_up_hours >= 1 && out.follow_up_hours <= 168 && out.follow_up_reason.trim() !== "";
-      return {
-        reply: out.reply.trim(),
-        cta: isCta(out.cta) ? out.cta : null,
-        guide: isGuide(out.guide) ? out.guide : null,
-        escalate: out.escalate_to_human,
-        buttons: [...new Set(out.buttons.filter(isQuickButton))].slice(0, 3),
-        actions: {
-          setGoal: goalOk ? { metric: metric as GoalMetric, target: out.set_goal.target, days: Math.min(Math.max(out.set_goal.days, 3), 90) } : null,
-          remember: out.remember.map((r) => r.trim()).filter(Boolean).slice(0, 5),
-          followUp: followOk ? { hours: out.follow_up_hours, reason: out.follow_up_reason.trim() } : null,
-          missionDone: out.mission_done,
-        },
-      };
+      return out;
     } catch (err) {
       this.logError(err, input.ctx.boss.id);
       return null;
@@ -229,22 +251,13 @@ export class ClaudeAssistant implements Assistant {
   async writePosts({ ctx, request }: { ctx: ContentCtx; request?: string }): Promise<string[] | null> {
     const { client, logger } = this.opts;
     const { effort, ...base } = this.baseParams();
-    const notes = ctx.coach?.state.notes.map((n) => `- ${n.text}`).join("\n");
-    const content = [
-      `Brand: ${ctx.boss.brandName}`,
-      `Boss: ${ctx.boss.firstName}`,
-      notes ? `What we know about the Boss:\n${notes}` : null,
-      request ? `The Boss's request: ${request}` : null,
-    ]
-      .filter(Boolean)
-      .join("\n");
     try {
       const response = await client.beta.messages.parse(
         {
           ...base,
           output_config: { effort, format: betaZodOutputFormat(PostsSchema) },
           system: POSTS_PROMPT,
-          messages: [{ role: "user", content }],
+          messages: [{ role: "user", content: postsRequest(ctx, request) }],
         },
         { timeout: 60_000 },
       );
@@ -261,15 +274,13 @@ export class ClaudeAssistant implements Assistant {
   async writeInvite({ ctx, audience }: { ctx: ContentCtx; audience: string }): Promise<string | null> {
     const { client, logger } = this.opts;
     const { effort, ...base } = this.baseParams();
-    const notes = ctx.coach?.state.notes.map((n) => `- ${n.text}`).join("\n");
-    const content = [`Brand: ${ctx.boss.brandName}`, `Boss: ${ctx.boss.firstName}`, `Audience: ${audience}`, notes ? `What we know about the Boss:\n${notes}` : null].filter(Boolean).join("\n");
     try {
       const response = await client.beta.messages.parse(
         {
           ...base,
           output_config: { effort, format: betaZodOutputFormat(InviteSchema) },
           system: INVITE_PROMPT,
-          messages: [{ role: "user", content }],
+          messages: [{ role: "user", content: inviteRequest(ctx, audience) }],
         },
         { timeout: 60_000 },
       );

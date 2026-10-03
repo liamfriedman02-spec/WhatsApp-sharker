@@ -50,7 +50,8 @@ WHATSAPP_WABA_ID=<WhatsApp Business Account ID>   # for submitting templates
 DEMO_BOSS_PHONE=972501234567    # your number, international format
 DEMO_BOSS_ID=boss_carla         # boss_ana | boss_bruno | boss_carla | boss_diego
 
-ANTHROPIC_API_KEY=<optional: enables the Claude coach and post writer>
+ANTHROPIC_API_KEY=<optional: enables the AI coach, invite and post writer>
+OPENAI_API_KEY=<or an OpenAI key instead of the Anthropic one>
 ```
 
 Keep `NODE_ENV=development` for testing; `production` also requires the Sharker API and admin secrets.
