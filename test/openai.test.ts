@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assistantLabel, createAssistant } from "../src/ai/factory.js";
-import { OpenAiAssistant, strictJsonSchema } from "../src/ai/openai.js";
+import { FALLBACK_MODEL, OpenAiAssistant, newestGptModel, strictJsonSchema } from "../src/ai/openai.js";
 import { loadConfig } from "../src/config.js";
 import { contentCtx } from "../src/content/context.js";
 import { silentLogger } from "../src/logger.js";
@@ -89,6 +89,51 @@ describe("OpenAiAssistant", () => {
     }
   });
 
+  it("with model 'auto', uses the newest GPT model the account can use (looked up once)", async () => {
+    const calls: string[] = [];
+    const models = ["gpt-4.1", "gpt-5", "gpt-5-mini", "gpt-6.1-mini", "gpt-6.1", "gpt-6.1-2026-05-01", "gpt-6.1-pro", "gpt-6", "o3", "gpt-5-chat-latest"];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.endsWith("/models")) return new Response(JSON.stringify({ data: models.map((id) => ({ id })) }), { status: 200 });
+      expect(JSON.parse(String(init?.body)).model).toBe("gpt-6.1");
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(ANSWER) } }] }), { status: 200 });
+    };
+    const assistant = new OpenAiAssistant({ apiKey: "sk-test", model: "auto", logger: silentLogger, fetch: fetchImpl });
+    expect((await assistant.answer({ ctx, question: "hi", history: [], flow: null }))?.reply).toBe(ANSWER.reply);
+    expect((await assistant.answer({ ctx, question: "hi", history: [], flow: null }))?.reply).toBe(ANSWER.reply);
+    expect(calls.filter((u) => u.endsWith("/models"))).toHaveLength(1);
+    expect(newestGptModel(models)).toBe("gpt-6.1");
+    expect(newestGptModel(["gpt-5-mini", "gpt-5-nano"])).toBe("gpt-5-mini");
+    expect(newestGptModel(["gpt-4.1", "o3"])).toBeNull();
+  });
+
+  it("falls back to a known model when the account's models can't be listed", async () => {
+    const seen: string[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      if (String(input).endsWith("/models")) return new Response("nope", { status: 401 });
+      seen.push(JSON.parse(String(init?.body)).model);
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(ANSWER) } }] }), { status: 200 });
+    };
+    const assistant = new OpenAiAssistant({ apiKey: "sk-test", model: "auto", logger: silentLogger, fetch: fetchImpl });
+    await assistant.answer({ ctx, question: "hi", history: [], flow: null });
+    expect(seen).toEqual([FALLBACK_MODEL]);
+  });
+
+  it("retries once without reasoning_effort when the model rejects it", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body));
+      bodies.push(body);
+      if (body.reasoning_effort) return new Response(JSON.stringify({ error: { message: "Unsupported parameter: 'reasoning_effort'", param: "reasoning_effort" } }), { status: 400 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(ANSWER) } }] }), { status: 200 });
+    };
+    const assistant = new OpenAiAssistant({ apiKey: "sk-test", model: "gpt-7", logger: silentLogger, fetch: fetchImpl });
+    expect((await assistant.answer({ ctx, question: "hi", history: [], flow: null }))?.reply).toBe(ANSWER.reply);
+    await assistant.answer({ ctx, question: "again", history: [], flow: null });
+    expect(bodies.map((b) => b.reasoning_effort)).toEqual(["low", undefined, undefined]); // remembered for the next call
+  });
+
   it("closes every object in a schema for strict mode", () => {
     const strict = strictJsonSchema({ $schema: "x", type: "object", properties: { a: { type: "string" }, b: { type: "array", items: { type: "object", properties: { c: { type: "number" } } } } } });
     expect(strict).toEqual({
@@ -110,7 +155,8 @@ describe("assistant factory", () => {
 
     const openai = loadConfig({ ...base, OPENAI_API_KEY: "sk-test" });
     expect(createAssistant(openai, silentLogger)).toBeInstanceOf(OpenAiAssistant);
-    expect(assistantLabel(openai)).toBe("openai:gpt-5-mini");
+    expect(assistantLabel(openai)).toBe("openai:newest GPT on the account");
+    expect(assistantLabel(loadConfig({ ...base, OPENAI_API_KEY: "sk-test", OPENAI_MODEL: "gpt-5-mini" }))).toBe("openai:gpt-5-mini");
 
     const both = loadConfig({ ...base, OPENAI_API_KEY: "sk-test", ANTHROPIC_API_KEY: "sk-ant-test", CLAUDE_MODEL: "claude-opus-5" });
     expect(createAssistant(both, silentLogger)).not.toBeInstanceOf(OpenAiAssistant);

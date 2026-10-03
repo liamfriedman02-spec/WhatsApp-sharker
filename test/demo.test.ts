@@ -76,7 +76,7 @@ describe("demo mode conversations", () => {
     const [linked, menu] = await h.tg({ type: "contact", contactPhone: TESTER });
     expect(textOf(linked?.message)).toContain("Connected! Welcome, Carla");
     expect(textOf(linked?.message)).toContain("Type *demo* anytime");
-    expect(menu?.message).toMatchObject({ kind: "list", footer: "🧪 Demo · type DEMO to switch Boss profile" });
+    expect(menu?.message).toMatchObject({ kind: "buttons", footer: "🧪 Demo · type DEMO to switch Boss profile" });
     expect(await h.store.getTelegramLink(CHAT)).toMatchObject({ bossId: `demo_${TESTER}_carla`, phone: TESTER });
   });
 
@@ -90,7 +90,7 @@ describe("demo mode conversations", () => {
 
     const [switched, menu] = await h.tg({ type: "reply", replyId: "demo:diego" });
     expect(textOf(switched?.message)).toContain("now testing as *Diego*");
-    expect(menu?.message.kind).toBe("list");
+    expect(menu?.message.kind).toBe("buttons");
     expect(h.messenger.sent.every((s) => s.to === `tg:${CHAT}`)).toBe(true);
     expect(await h.store.getState(`demo_${TESTER}_diego`, TESTER)).toMatchObject({ channel: "telegram", telegramChatId: CHAT });
 

@@ -13,17 +13,30 @@ describe("conversation basics", () => {
     expect(textOf(out[0])).toContain("couldn't find a Boss account");
   });
 
-  it("greets with a personal main menu that pushes the next step", async () => {
+  it("greets with a short home screen (3 buttons) that leads with the one thing to do", async () => {
     const h = harness();
-    const [menu] = await h.text(PHONES.ana, "Hi!");
-    expect(menu?.kind).toBe("list");
-    expect(textOf(menu)).toContain("Hi Ana!");
-    expect(textOf(menu)).toContain("*Ana Arena*");
-    expect(textOf(menu)).toContain("Here's the plan for *Ana Arena* today");
-    expect(textOf(menu)).toContain("Activate your AI Marketing Agent");
-    expect(ids(menu)).toEqual(
+    const [home] = await h.text(PHONES.ana, "Hi!");
+    expect(home?.kind).toBe("buttons");
+    expect(textOf(home)).toContain("Hi Ana!");
+    expect(textOf(home)).toContain("Here's the plan for *Ana Arena* today");
+    expect(textOf(home)).toContain("7-day launch sprint");
+    expect(ids(home)).toEqual(["play:start:launch", "menu:business", "menu:more"]);
+
+    const [more] = await h.tap(PHONES.ana, "menu:more");
+    expect(more?.kind).toBe("list");
+    expect(textOf(more)).toContain("activate your AI Marketing Agent");
+    expect(ids(more)).toEqual(
       expect.arrayContaining(["play:start:launch", "mission:today", "coach:progress", "menu:business", "menu:ai_agent", "channels:menu", "texts:menu", "money:menu", "menu:learn", "menu:help"]),
     );
+    expect(ids(more).length).toBeLessThanOrEqual(10);
+
+    const [diego] = await h.text(PHONES.diego, "menu"); // 32 inactive players → the comeback campaign leads
+    expect(ids(diego)).toEqual(["play:start:comeback_week", "menu:business", "menu:more"]);
+    const state = await h.store.getCoachState("boss_diego");
+    await h.store.saveCoachState("boss_diego", { ...state, playbooksDone: ["comeback_week", "friend_week", "channel_week"] });
+    const [plain] = await h.text(PHONES.diego, "menu"); // nothing to propose → today's mission is the button
+    expect(ids(plain)).toEqual(["mission:today", "menu:business", "menu:more"]);
+    expect(textOf(plain)).toContain("👉 *");
   });
 
   it("ignores duplicate webhook deliveries", async () => {
@@ -194,7 +207,7 @@ describe("human handoff", () => {
     expect(desk.events.at(-1)).toMatchObject({ event: "handoff.closed", reason: "resolved_by_agent" });
 
     const [menu] = await h.text(PHONES.diego, "hi");
-    expect(menu?.kind).toBe("list");
+    expect(menu?.kind).toBe("buttons");
   });
 
   it("cancelling or navigating away doesn't open a ticket", async () => {
@@ -212,7 +225,7 @@ describe("human handoff", () => {
     await h.text(PHONES.ana, "help me please");
     h.advance(25 * 3_600_000);
     const [menu] = await h.text(PHONES.ana, "hi");
-    expect(menu?.kind).toBe("list");
+    expect(menu?.kind).toBe("buttons");
     expect((await h.store.listHandoffs("open")).length).toBe(0);
   });
 });
@@ -224,7 +237,7 @@ describe("preferences", () => {
     expect((await h.store.getState("boss_ana", PHONES.ana)).optedOut).toBe(true);
     const out = await h.text(PHONES.ana, "start");
     expect((await h.store.getState("boss_ana", PHONES.ana)).optedOut).toBe(false);
-    expect(out[1]?.kind).toBe("list");
+    expect(out[1]?.kind).toBe("buttons");
   });
 
   it("changes the performance summary frequency", async () => {
@@ -236,6 +249,17 @@ describe("preferences", () => {
 
 describe("AI assistant", () => {
   const stub = (impl: Assistant["answer"]): Assistant => ({ answer: vi.fn(impl), writePosts: vi.fn(async () => null) });
+
+  it("answers a greeting like a person instead of opening a menu", async () => {
+    const assistant = stub(async () => answer({ reply: "Hey Carla! Ready to bring 5 players back today?", buttons: ["mission:today"] }));
+    const h = harness({ assistant });
+    const [m] = await h.text(PHONES.carla, "hello");
+    expect(textOf(m)).toContain("Hey Carla!");
+    expect(ids(m)).toEqual(["mission:today"]);
+    expect(vi.mocked(assistant.answer).mock.calls[0]![0].question).toBe("hello");
+    const [menu] = await h.text(PHONES.carla, "menu"); // "menu" still opens the home screen
+    expect(ids(menu)).toContain("menu:more");
+  });
 
   it("sends the answer with the Boss Hub button it picked", async () => {
     const assistant = stub(async () => answer({ reply: "Activate your Agent and it posts for you!", cta: "agent_activate" }));
@@ -261,7 +285,7 @@ describe("AI assistant", () => {
   it("gets Boss data and recent history, and falls back to the knowledge base on failure", async () => {
     const assistant = stub(async () => null);
     const h = harness({ assistant });
-    await h.text(PHONES.carla, "hi");
+    await h.text(PHONES.carla, "menu");
     const [fallback] = await h.text(PHONES.carla, "where is my gcoin balance");
     const call = vi.mocked(assistant.answer).mock.calls[0]![0];
     expect(call.question).toBe("where is my gcoin balance");

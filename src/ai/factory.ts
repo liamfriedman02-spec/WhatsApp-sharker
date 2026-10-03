@@ -20,6 +20,6 @@ export function assistantLabel(config: Config): string {
   const { ai } = config;
   if (!ai.enabled) return "disabled";
   if (ai.apiKey) return ai.model;
-  if (ai.openaiApiKey) return `openai:${ai.openaiModel}`;
+  if (ai.openaiApiKey) return `openai:${ai.openaiModel === "auto" ? "newest GPT on the account" : ai.openaiModel}`;
   return "disabled";
 }

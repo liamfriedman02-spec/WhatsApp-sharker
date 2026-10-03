@@ -116,14 +116,16 @@ export function toTelegramPayload(message: OutboundMessage): Json {
         text: html([header(message.header), toTelegramHtml(message.body), footer(message.footer)]),
         reply_markup: { inline_keyboard: message.buttons.map((b) => [{ text: b.title, callback_data: b.id }]) },
       };
-    case "list":
+    case "list": {
+      // WhatsApp collapses a list behind one button; Telegram shows every row. Long lists go two
+      // per line so the screen isn't a wall of buttons.
+      const rows = message.sections.flatMap((s) => s.rows.map((r) => ({ text: r.title, callback_data: r.id })));
       return {
         ...base,
         text: html([header(message.header), toTelegramHtml(message.body), footer(message.footer)]),
-        reply_markup: {
-          inline_keyboard: message.sections.flatMap((s) => s.rows.map((r) => [{ text: r.title, callback_data: r.id }])),
-        },
+        reply_markup: { inline_keyboard: rows.length > 4 ? grid(rows, 2) : rows.map((r) => [r]) },
       };
+    }
     case "cta":
       return {
         ...base,
@@ -134,6 +136,12 @@ export function toTelegramPayload(message: OutboundMessage): Json {
       // WhatsApp templates exist only for WhatsApp's 24h rule; Telegram always gets the interactive version.
       throw new Error("WhatsApp templates can't be sent on Telegram");
   }
+}
+
+function grid<T>(items: T[], perRow: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += perRow) out.push(items.slice(i, i + perRow));
+  return out;
 }
 
 function header(text?: string): string | undefined {

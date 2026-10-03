@@ -45,7 +45,8 @@ const EnvSchema = z.object({
   /** Server-side refusal fallback (Claude API). Disable for platforms/models without it. */
   CLAUDE_REFUSAL_FALLBACK: bool(true),
   OPENAI_API_KEY: optionalString,
-  OPENAI_MODEL: z.string().default("gpt-5-mini"),
+  /** A model id, or "auto" = the newest GPT model the account can use. */
+  OPENAI_MODEL: z.string().default("auto"),
   AI_ASSISTANT_ENABLED: bool(true),
 
   // Sharker platform

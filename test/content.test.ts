@@ -8,6 +8,7 @@ import {
   faqMessages,
   guideStepMessage,
   helpMenu,
+  homeMessage,
   learnMenu,
   mainMenu,
   nextActionMessage,
@@ -77,7 +78,7 @@ function allViews(): OutboundMessage[] {
   for (const c of FAQ_CATEGORIES) out.push(faqCategoryMenu(c.id));
   for (const ctx of ctxs) {
     const state = ctx.coach!.state;
-    out.push(mainMenu(ctx), mainMenu({ ...ctx, demo: true }), businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
+    out.push(homeMessage(ctx), homeMessage({ ...ctx, demo: true }), mainMenu(ctx), mainMenu({ ...ctx, demo: true }), businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
     out.push(textsMenu(ctx), channelsMessage(ctx, state), moneyMenu(ctx), playbookMenu(ctx, state), ...inviteMessages(ctx, AUDIENCES.map((a) => inviteFor(ctx, a))));
     for (const kind of ["welcome", "referral", "followup", "comeback"]) out.push(...playerTextMessages(ctx, kind)!);
     for (const amount of [100, 300, 1000, 50_000]) out.push(moneyAnswerMessage(ctx, moneyMath(ctx, ctx.coach!.insights, amount), state));
@@ -91,9 +92,9 @@ function allViews(): OutboundMessage[] {
           out.push(...stepMessages(ctx, { playbook: pb, index, step, mission: { record, def }, opened: true }, ctx.coach!));
         }
       });
-      // The main menu and the campaign list with this plan active.
+      // The home screen, the full menu and the campaign list with this plan active.
       const active = { ...ctx, coach: { ...ctx.coach!, state: { ...state, playbook: { id: pb.id, step: 0, stepDate: ctx.coach!.today, startedAt: "", status: "active" as const } } } };
-      out.push(mainMenu(active), playbookMenu(active, active.coach.state));
+      out.push(homeMessage(active), mainMenu(active), playbookMenu(active, active.coach.state));
     }
     out.push(progressMessage(ctx, ctx.coach!), coachSessionMessage(ctx, ctx.coach!, MISSIONS[0]!), ...postsMessages(ctx, fallbackPosts(ctx)));
     out.push(goalProposalMessage(ctx, proposeGoal(ctx.boss, ctx.coach!.insights, MONDAY_NOON), ctx.coach!));

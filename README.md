@@ -64,7 +64,7 @@ Requires Node ≥ 22.13 (it uses the built-in `node:sqlite`).
 |---|---|---|
 | Setup | Meta app + webhook ([guide](docs/whatsapp-setup.md)) | @BotFather token ([guide](docs/telegram-setup.md)) |
 | Who is the Boss? | The sender's phone number | The Boss shares their own number once (📱 button); the chat is linked to that Boss |
-| Buttons | Reply buttons, lists, link buttons | Inline keyboards |
+| Buttons | Reply buttons, lists (collapsed behind one button), link buttons | Inline keyboards; long lists two buttons per line |
 | Proactive messages | Approved templates outside the 24h window; WhatsApp opt-in required | Always the interactive version; free, no window |
 
 Proactive coaching follows the Boss to the app they used last.
@@ -100,7 +100,7 @@ Proactive coaching follows the Boss to the app they used last.
 
 ### Conversation map
 
-`hi` / `menu` → **Main menu**: "Here's the plan for *your brand* today" — the one thing to do first, then the rows:
+`menu` → **Home**: "Here's the plan for *your brand* today" — the one thing to do, and three buttons: do it (today's step / start day 1 / today's mission), 📊 My business, ☰ More. `hi` is a conversation: with an AI key the coach answers like a person (home screen without one). **More** lists everything:
 - 🚀 **My plan today** (or the plan the coach would start now): the day's step of the launch sprint or campaign, with its texts
 - 🎯 **Today's mission**: one action for today, with ✅ Done · Guide me · Another one
 - 🏆 **My goal & level**: level ladder, goal progress bar and pace, streak and points, top insight
@@ -172,7 +172,7 @@ Other admin endpoints: `GET /admin/handoffs?status=open`, `POST /admin/retention
 - Structured output: `reply`, `cta`, `guide`, `escalate_to_human`, plus the coaching actions `set_goal`, `remember`, `follow_up_hours`/`follow_up_reason` and `mission_done`. Every action is validated before it's applied. The model picks buttons by id only, so it can never invent a URL.
 - The system prompt (coach persona, rules, full knowledge base) is identical for every Boss and is prompt-cached. The Boss's data, coach data and recent conversation go in the user turn.
 - The server-side refusal fallback (`fallbacks: "default"`) is on. Turn it off with `CLAUDE_REFUSAL_FALLBACK=false` for platforms or models that don't support it.
-- No Anthropic key? `OPENAI_API_KEY` runs the same coach (same prompts, schemas and validation) on OpenAI Chat Completions with a strict JSON schema; `OPENAI_MODEL` defaults to `gpt-5-mini`. The Anthropic key wins when both are set.
+- No Anthropic key? `OPENAI_API_KEY` runs the same coach (same prompts, schemas and validation) on OpenAI Chat Completions with a strict JSON schema. `OPENAI_MODEL` defaults to `auto`: the newest general GPT model the account can use (gpt-6.1 beats gpt-6 beats gpt-5.2, full model before -mini), looked up once from `/v1/models`; set a model id to pin one. The Anthropic key wins when both are set.
 - Refusals, errors and rate limits fall back to keyword search and built-in posts. Each Boss is limited to 30 AI calls per hour.
 
 ## Editing content

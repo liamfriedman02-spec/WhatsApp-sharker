@@ -48,6 +48,10 @@ describe("Telegram formatting", () => {
     });
     expect(list.text).toBe("<b>Menu</b>\n\nHi");
     expect(list.reply_markup).toEqual({ inline_keyboard: [[{ text: "🎓 Learn", callback_data: "menu:learn" }], [{ text: "💬 Help", callback_data: "menu:help" }]] });
+    // Long lists go two buttons per line, so a 9-row menu is 5 lines, not 9.
+    const long = toTelegramPayload({ kind: "list", body: "x", buttonLabel: "Open", sections: [{ title: "S", rows: Array.from({ length: 9 }, (_, i) => ({ id: `menu:r${i}`, title: `R${i}` })) }] });
+    const keyboard = (long.reply_markup as { inline_keyboard: unknown[][] }).inline_keyboard;
+    expect(keyboard.map((row) => row.length)).toEqual([2, 2, 2, 2, 1]);
     const cta = toTelegramPayload({ kind: "cta", body: "Go", footer: "Reply MENU", cta: { label: "Open", url: "https://hub.test/x?utm_source=whatsapp" } });
     expect(cta.text).toBe("Go\n\n<i>Reply MENU</i>");
     expect(cta.reply_markup).toEqual({ inline_keyboard: [[{ text: "Open", url: "https://hub.test/x?utm_source=telegram" }]] });
@@ -97,7 +101,7 @@ describe("Telegram conversations", () => {
 
     const [linked, menu] = await link(h);
     expect(textOf(linked?.message)).toContain("Connected! Welcome, Carla");
-    expect(menu?.message.kind).toBe("list");
+    expect(menu?.message.kind).toBe("buttons");
     expect(menu?.to).toBe(TG);
     expect(await h.store.getTelegramLink(CHAT)).toMatchObject({ bossId: "boss_carla", phone: PHONES.carla });
     expect(await h.store.getState("boss_carla", PHONES.carla)).toMatchObject({ channel: "telegram", telegramChatId: CHAT });

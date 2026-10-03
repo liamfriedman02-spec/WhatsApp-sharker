@@ -3,6 +3,7 @@ import { TOPICS, type Topic } from "../content/topics.js";
 
 export type Command =
   | "menu"
+  | "greet"
   | "help"
   | "human"
   | "stop"
@@ -22,7 +23,9 @@ export type Command =
 
 /** Short exact-match commands (after normalization). Everything else goes to the assistant. */
 const COMMANDS: Record<Command, string[]> = {
-  menu: ["menu", "hi", "hello", "hey", "hola", "oi", "ola", "main menu", "home", "back", "inicio"],
+  menu: ["menu", "main menu", "home", "back", "inicio", "start over"],
+  // A greeting opens a conversation (the AI coach answers); without AI it shows the home screen.
+  greet: ["hi", "hello", "hey", "hi there", "hey there", "good morning", "good evening", "hola", "oi", "ola", "olá", "shalom", "שלום", "היי", "הי", "אהלן", "yo", "sup", "whats up", "what's up"],
   help: ["help", "support", "ajuda", "ayuda", "faq"],
   human: ["human", "talk to a human", "real person", "person", "operator", "talk to someone", "support team", "atendente", "agente humano"],
   stop: ["stop", "unsubscribe", "pause tips", "stop tips", "pausar"],

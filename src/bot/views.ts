@@ -27,9 +27,42 @@ export const BTN = {
 } satisfies Record<string, Button>;
 
 /**
- * The home screen. The coach leads: it states today's plan and the one thing to do first;
- * the rows are there for everything else.
+ * The home screen: the coach states the one thing to do today and offers three taps —
+ * do it, see the numbers, or "More" for everything else. Short on purpose: on Telegram every
+ * row is a button, and a wall of buttons is the opposite of a coach who leads.
  */
+export function homeMessage(ctx: ContentCtx): OutboundMessage {
+  const { boss, coach } = ctx;
+  const state = coach?.state;
+  const active = state?.playbook?.status === "active" ? getPlaybook(state.playbook.id) : undefined;
+  const proposed = coach && state && !active ? proposePlaybook(ctx, state) : null;
+  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
+
+  let lead: string;
+  let primary: Button;
+  if (active && state?.playbook) {
+    const step = active.steps[state.playbook.step];
+    const done = coach?.todayMission?.record.status === "done";
+    lead = `${active.emoji} ${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}\n👉 ${done ? "Today's step is done ✅ Tomorrow I bring the next one." : `*${step?.title ?? "Today's step"}* — 10 minutes, everything's prepared.`}`;
+    primary = { id: "play:today", title: done ? "⏭️ Next day now" : "▶️ Today's step" };
+  } else if (proposed) {
+    lead = `${proposed.emoji} *${proposed.title}* — ${proposed.steps.length} days, 10 minutes a day.\n👉 Day 1: *${proposed.steps[0]?.title ?? ""}*. I prepare everything, you press send.`;
+    primary = { id: `play:start:${proposed.id}`, title: "🚀 Start day 1" };
+  } else {
+    const done = coach?.todayMission?.record.status === "done";
+    lead = `👉 ${done ? "Today's mission is done ✅ Want a bonus one?" : `*${capitalizeFirst(nextBestAction(ctx).text)}*.`}`;
+    primary = done ? { id: "mission:bonus", title: "🎯 Bonus mission" } : { id: "mission:today", title: "🎯 Do it now" };
+  }
+  return {
+    kind: "buttons",
+    header: "Your Boss Coach",
+    body: `Hi ${boss.firstName}! 👋 Here's the plan for *${boss.brandName}* today:\n${lead}${streak}\n\nTap below, or just tell me what you need.`,
+    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "You can also just type to me",
+    buttons: [primary, BTN.business, { id: "menu:more", title: "☰ More" }],
+  };
+}
+
+/** Everything the coach can do, one row each (behind "More" on the home screen). */
 export function mainMenu(ctx: ContentCtx): OutboundMessage {
   const { boss, coach } = ctx;
   const nba = nextBestAction(ctx);
@@ -60,9 +93,9 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
 
   return {
     kind: "list",
-    header: "Your Boss Coach",
-    body: `Hi ${boss.firstName}! 👋 Here's the plan for *${boss.brandName}* today:${planLead}\n👉 ${capitalizeFirst(nba.text)}.\n\nDo that first — everything else is ready below.${streak}`,
-    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "Tip: you can also just type to me",
+    header: "Everything I can do",
+    body: `For *${boss.brandName}*:${planLead}\n👉 First: ${nba.text}.\n\nPick what you need — or just type.${streak}`,
+    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "You can also just type to me",
     buttonLabel: "Open menu",
     sections: [
       {

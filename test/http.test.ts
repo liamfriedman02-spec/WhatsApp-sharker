@@ -53,7 +53,7 @@ describe("HTTP server", () => {
     });
     expect(signed.status).toBe(200);
     await queue.idle();
-    expect(h.messenger.to(PHONES.ana)[0]?.kind).toBe("list");
+    expect(h.messenger.to(PHONES.ana)[0]?.kind).toBe("buttons");
   });
 
   it("accepts signed Sharker platform events and triggers retention in real time", async () => {

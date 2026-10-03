@@ -61,6 +61,7 @@ import {
   guideStepMessage,
   helpMenu,
   learnMenu,
+  homeMessage,
   mainMenu,
   notABossMessage,
   settingsMenu,
@@ -144,7 +145,7 @@ export class BotRouter {
     try {
       if (justLinked) {
         this.push(turn, telegramLinkedMessage(boss, !!this.deps.demo));
-        this.push(turn, mainMenu(ctx));
+        this.push(turn, homeMessage(ctx));
       } else {
         await this.dispatch(turn, msg);
       }
@@ -204,7 +205,7 @@ export class BotRouter {
   private async dispatch(t: Turn, msg: InboundMessage): Promise<void> {
     await this.expireStaleHandoff(t);
 
-    if (msg.type === "contact") return this.push(t, mainMenu(t.ctx)); // already linked
+    if (msg.type === "contact") return this.push(t, homeMessage(t.ctx)); // already linked
 
     if (msg.type === "unsupported") {
       if (t.state.mode === "human") return this.forwardToHuman(t, `[Boss sent a ${msg.rawType ?? "non-text"} message]`);
@@ -232,12 +233,12 @@ export class BotRouter {
     if (t.state.mode === "awaiting_handoff") {
       if (cmd === "menu") {
         t.state.mode = "bot";
-        return this.push(t, mainMenu(t.ctx));
+        return this.push(t, homeMessage(t.ctx));
       }
       return this.openHandoff(t, text);
     }
     if (t.state.mode === "human") {
-      if (cmd === "menu") return this.push(t, mainMenu(t.ctx));
+      if (cmd === "menu") return this.push(t, homeMessage(t.ctx));
       return this.forwardToHuman(t, text);
     }
 
@@ -246,7 +247,10 @@ export class BotRouter {
 
     switch (cmd) {
       case "menu":
-        return this.push(t, mainMenu(t.ctx));
+        return this.push(t, homeMessage(t.ctx));
+      case "greet":
+        // "hi" is a conversation, not a request for a menu: the AI coach answers like a person would.
+        return this.deps.assistant && this.deps.config.ai.enabled ? this.answerFreeText(t, text) : this.push(t, homeMessage(t.ctx));
       case "help":
         return this.push(t, helpMenu());
       case "human":
@@ -331,7 +335,7 @@ export class BotRouter {
         if (arg === "done" || arg === "check") return this.guideDone(t, arg === "check");
         if (arg === "stuck") return this.guideStuck(t);
         t.state.flow = null;
-        return this.push(t, mainMenu(t.ctx));
+        return this.push(t, homeMessage(t.ctx));
       case "handoff":
         if (arg === "start") return this.askForHandoff(t);
         if (arg === "cancel") {
@@ -339,7 +343,7 @@ export class BotRouter {
           return this.push(t, { kind: "buttons", body: "No problem — I'm here if you need me.", buttons: [BTN.menu, BTN.help] });
         }
         if (arg === "close") return this.closeHandoffByBoss(t);
-        return this.push(t, mainMenu(t.ctx));
+        return this.push(t, homeMessage(t.ctx));
       case "settings":
         return this.onSettings(t, arg ?? "", extra);
       case "ask":
@@ -349,7 +353,7 @@ export class BotRouter {
         });
       default:
         this.deps.logger.warn("router: unknown reply id", { id });
-        return this.push(t, mainMenu(t.ctx));
+        return this.push(t, homeMessage(t.ctx));
     }
   }
 
@@ -365,8 +369,10 @@ export class BotRouter {
         return this.pushAll(t, aiAgentMessages(t.ctx));
       case "settings":
         return this.push(t, settingsMenu(t.state, t.coach.state.intensity));
-      default:
+      case "more":
         return this.push(t, mainMenu(t.ctx));
+      default:
+        return this.push(t, homeMessage(t.ctx));
     }
   }
 
@@ -422,14 +428,14 @@ export class BotRouter {
       });
     }
     this.push(t, { kind: "text", text: "▶️ Tips are back on! I'll keep you posted on your brand." });
-    this.push(t, mainMenu(t.ctx));
+    this.push(t, homeMessage(t.ctx));
   }
 
   // ── Guides ────────────────────────────────────────────────────────────────
 
   private startGuide(t: Turn, guideId: string): void {
     const requested = getGuide(guideId);
-    if (!requested) return this.push(t, mainMenu(t.ctx));
+    if (!requested) return this.push(t, homeMessage(t.ctx));
 
     // Skip guides the Boss already completed and continue with the next one in the chain.
     let guide: Guide | undefined = requested;
@@ -456,7 +462,7 @@ export class BotRouter {
     const guide = flow ? getGuide(flow.guideId) : undefined;
     if (!flow || !guide) {
       t.state.flow = null;
-      return this.push(t, mainMenu(t.ctx));
+      return this.push(t, homeMessage(t.ctx));
     }
     if (!recheck && flow.step + 1 < guide.steps.length) {
       flow.step += 1;
@@ -522,7 +528,7 @@ export class BotRouter {
   private async switchDemo(t: Turn, value: string): Promise<void> {
     const demo = this.deps.demo;
     const persona = personaId(value);
-    if (!demo || !persona) return this.push(t, demo ? demoMenu() : mainMenu(t.ctx));
+    if (!demo || !persona) return this.push(t, demo ? demoMenu() : homeMessage(t.ctx));
     const { store, config, coach } = this.deps;
     const boss = await demo.assign(t.boss.phone, persona);
     const state = await store.getState(boss.id, boss.phone);
@@ -541,7 +547,7 @@ export class BotRouter {
     const p = demo.personaOf(boss)!;
     this.deps.logger.info("demo profile switched", { bossId: boss.id });
     this.push(t, { kind: "text", text: `🧪 You're now testing as *${boss.firstName}* — *${boss.brandName}*.\n${p.description}` });
-    this.push(t, mainMenu(t.ctx));
+    this.push(t, homeMessage(t.ctx));
   }
 
   // ── Plans: launch sprint & campaigns ──────────────────────────────────────
