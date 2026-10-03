@@ -14,6 +14,10 @@ export type Command =
   | "mission"
   | "progress"
   | "post"
+  | "plan"
+  | "texts"
+  | "money"
+  | "channels"
   | "demo";
 
 /** Short exact-match commands (after normalization). Everything else goes to the assistant. */
@@ -29,7 +33,11 @@ const COMMANDS: Record<Command, string[]> = {
   learn: ["learn", "education", "course", "topics", "tutorial"],
   mission: ["mission", "my mission", "today's mission", "todays mission", "daily mission", "challenge", "what should i do today"],
   progress: ["progress", "my progress", "goal", "my goal", "level", "my level", "points", "streak", "coach"],
-  post: ["post", "write a post", "write me a post", "caption", "post ideas", "content"],
+  post: ["post", "write a post", "write me a post", "caption", "post ideas"],
+  plan: ["sprint", "my sprint", "launch sprint", "start sprint", "plan", "my plan", "campaign", "campaigns", "my campaign", "playbook"],
+  texts: ["texts", "invite", "invites", "invitation", "invite text", "invite texts", "write an invite", "content", "my texts"],
+  money: ["money", "earn", "earnings math", "how much", "how much can i earn", "calculator", "earnings calculator", "how much will i earn"],
+  channels: ["channels", "my channels", "marketing channels", "open a channel", "new channel"],
   demo: ["demo", "demo mode", "switch boss", "switch profile", "profiles"],
 };
 
@@ -55,6 +63,13 @@ const AFFIRMATIVE = ["done", "ok", "okay", "next", "yes", "ready", "finished", "
 
 export function isAffirmative(text: string): boolean {
   return AFFIRMATIVE.includes(normalize(text));
+}
+
+const DONE_REPORT = ["done", "did it", "i did it", "all done", "done it", "sent", "sent it", "i sent it", "shared", "shared it", "i shared it", "posted", "posted it", "i posted it", "finished", "feito", "listo", "hecho", "pronto"];
+
+/** "sent it", "done" — the Boss reports today's mission as done without tapping the button. */
+export function isDoneReport(text: string): boolean {
+  return DONE_REPORT.includes(normalize(text));
 }
 
 export type KnowledgeMatch = { type: "faq"; faq: FaqEntry; score: number } | { type: "topic"; topic: Topic; score: number };

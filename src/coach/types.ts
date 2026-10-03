@@ -35,6 +35,20 @@ export interface CoachNote {
   at: string;
 }
 
+/**
+ * A multi-day plan the Boss is following (the 7-day launch sprint, or a campaign).
+ * One step per local day; the step's mission is today's mission.
+ */
+export interface PlaybookState {
+  id: string;
+  /** 0-based index of the current step. */
+  step: number;
+  /** Local date (YYYY-MM-DD) the current step was opened. */
+  stepDate: string;
+  startedAt: string;
+  status: "active" | "done" | "stopped";
+}
+
 /** Everything the coach remembers about one Boss. */
 export interface CoachState {
   intensity: CoachIntensity;
@@ -47,6 +61,13 @@ export interface CoachState {
   lastMissionDoneAt: string | null;
   notes: CoachNote[];
   followUps: FollowUp[];
+  playbook: PlaybookState | null;
+  /** Playbooks already completed or stopped (not proposed again). */
+  playbooksDone: string[];
+  /** Who the Boss can invite (audience ids, or free text they typed). */
+  audiences: string[];
+  /** Marketing channels the Boss told us they opened: channel id → ISO date. */
+  channels: Record<string, string>;
 }
 
 export function defaultCoachState(): CoachState {
@@ -59,6 +80,10 @@ export function defaultCoachState(): CoachState {
     lastMissionDoneAt: null,
     notes: [],
     followUps: [],
+    playbook: null,
+    playbooksDone: [],
+    audiences: [],
+    channels: {},
   };
 }
 

@@ -9,7 +9,7 @@ import { HUB, MONDAY_NOON } from "./helpers.js";
 const carla = demoBosses(MONDAY_NOON.getTime()).find((b) => b.id === "boss_carla")!;
 const ctx = contentCtx(carla, { now: MONDAY_NOON, hubUrl: HUB, defaultTimezone: "UTC" });
 
-const NO_ACTION_FIELDS = { set_goal: { metric: "none", target: 0, days: 0 }, remember: [], follow_up_hours: 0, follow_up_reason: "", mission_done: false };
+const NO_ACTION_FIELDS = { set_goal: { metric: "none", target: 0, days: 0 }, remember: [], follow_up_hours: 0, follow_up_reason: "", mission_done: false, buttons: [] };
 
 /** Anthropic client whose HTTP layer is a stub: captures the request, returns `reply`. */
 function fakeClient(reply: { text?: string; stop_reason?: string; status?: number }) {
@@ -51,6 +51,7 @@ describe("ClaudeAssistant", () => {
       cta: "agent_view",
       guide: null,
       escalate: false,
+      buttons: [],
       actions: { setGoal: null, remember: [], followUp: null, missionDone: false },
     });
     const req = requests[0]!;
@@ -65,7 +66,8 @@ describe("ClaudeAssistant", () => {
     const system = req.body.system as { text: string; cache_control: unknown }[];
     expect(system[0]!.cache_control).toEqual({ type: "ephemeral" });
     const schema = (req.body.output_config as { format: { schema: { properties: Record<string, { description?: string }>; required: string[] } } }).format.schema;
-    expect(schema.required).toEqual(["reply", "cta", "guide", "escalate_to_human", "set_goal", "remember", "follow_up_hours", "follow_up_reason", "mission_done"]);
+    expect(schema.required).toEqual(["reply", "cta", "guide", "escalate_to_human", "set_goal", "remember", "follow_up_hours", "follow_up_reason", "mission_done", "buttons"]);
+    expect(schema.properties.buttons!.description).toContain("mission:done");
     expect(schema.properties.cta!.description).toContain("agent_activate");
     expect(schema.properties.guide!.description).toContain("connect_socials");
   });
@@ -82,6 +84,7 @@ describe("ClaudeAssistant", () => {
         follow_up_hours: 999,
         follow_up_reason: "x",
         mission_done: false,
+        buttons: ["mission:done", "made_up:button", "mission:done", "texts:menu", "menu:main"],
       }),
     });
     const assistant = new ClaudeAssistant({ client, model: "claude-opus-5", effort: "low", logger: silentLogger });
@@ -90,6 +93,7 @@ describe("ClaudeAssistant", () => {
       cta: null,
       guide: null,
       escalate: false,
+      buttons: ["mission:done", "texts:menu", "menu:main"], // unknown ids dropped, duplicates merged, max 3
       actions: { setGoal: null, remember: [], followUp: null, missionDone: false },
     });
   });
@@ -106,6 +110,7 @@ describe("ClaudeAssistant", () => {
         follow_up_hours: 20,
         follow_up_reason: "share your link in 3 groups",
         mission_done: true,
+        buttons: [],
       }),
     });
     const assistant = new ClaudeAssistant({ client, model: "claude-opus-5", effort: "low", logger: silentLogger });

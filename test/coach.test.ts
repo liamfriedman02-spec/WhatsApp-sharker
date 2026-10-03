@@ -202,7 +202,7 @@ describe("coaching conversation", () => {
 });
 
 describe("AI coach actions", () => {
-  const coachAnswer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "Let's go!", cta: null, guide: null, escalate: false, actions: NO_ACTIONS, ...a });
+  const coachAnswer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "Let's go!", cta: null, guide: null, escalate: false, buttons: [], actions: NO_ACTIONS, ...a });
 
   it("sets goals, remembers, schedules check-ins and completes missions from the conversation", async () => {
     const assistant: Assistant = {
@@ -250,7 +250,7 @@ describe("AI coach actions", () => {
   it("sends the coach data to Claude", () => {
     const ctx = ctxOf("boss_carla");
     ctx.coach = {
-      state: { intensity: "intense", goal: null, pendingGoal: null, level: 5, points: 120, streak: 4, lastMissionDoneAt: null, notes: [{ text: "Posts mostly on TikTok", at: "" }], followUps: [] },
+      state: { intensity: "intense", goal: null, pendingGoal: null, level: 5, points: 120, streak: 4, lastMissionDoneAt: null, notes: [{ text: "Posts mostly on TikTok", at: "" }], followUps: [], playbook: null, playbooksDone: [], audiences: ["family"], channels: {} },
       insights: computeInsights(ctx, [], "2026-09-28"),
       level: levelView(ctx.boss),
       goal: null,

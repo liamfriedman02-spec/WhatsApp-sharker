@@ -29,7 +29,7 @@ chat to the Boss account with that number. From then on:
 
 - every menu, mission, goal and AI answer works as on WhatsApp, with Telegram buttons
 - proactive coaching goes to the app the Boss used last (Telegram or WhatsApp)
-- the commands menu has `/menu`, `/mission`, `/progress`, `/post`, `/help`
+- the commands menu has `/menu`, `/plan`, `/mission`, `/texts`, `/money`, `/progress`, `/help`
 
 ### Demo mode (before the Sharker API is connected)
 

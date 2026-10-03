@@ -14,7 +14,7 @@
  * Coaching triggers (missions, goals, levels, momentum, follow-ups) read the coach view and
  * persist what they sent through `onSent` (e.g. the mission becomes today's mission).
  */
-import { plannedMission, plannedProposal } from "../coach/plan.js";
+import { plannedMission, plannedProposal, plannedStep } from "../coach/plan.js";
 import type { CoachService, CoachView } from "../coach/service.js";
 import type { ContentCtx } from "../content/context.js";
 import { NUDGES, type NudgeTemplate } from "../content/nudges.js";
@@ -50,6 +50,8 @@ export interface Trigger {
 
 const launchedDaysAgo = ({ ctx }: TriggerInput) => daysBetween(ctx.boss.brandLaunchedAt, ctx.now);
 const hoursSince = (d: Date | null, now: Date) => (d ? (now.getTime() - d.getTime()) / HOUR : Infinity);
+/** A Boss following a plan gets its daily step and nothing else to do (the plan covers the Agent, players, channels). */
+const inPlan = ({ coach }: TriggerInput) => coach.state.playbook?.status === "active";
 
 /** Mission days per intensity (0 = Sunday). Monday is covered by the weekly coaching. */
 const MISSION_DAYS = { light: [], standard: [2, 4], intense: [0, 2, 3, 4, 5, 6] } as const;
@@ -143,6 +145,29 @@ export const TRIGGERS: Trigger[] = [
     template: () => NUDGES.agent_first_post,
   },
   {
+    id: "playbook_done",
+    category: "milestone",
+    priority: 86,
+    schedule: { type: "recurring" },
+    // The day after the last step of the Boss's plan.
+    when: ({ ctx }) => plannedStep(ctx) === "finished",
+    template: () => NUDGES.playbook_done,
+    onSent: async ({ ctx, coach }, svc) => void (await svc.openStep(ctx, coach)), // marks the plan done
+  },
+  {
+    id: "playbook_step",
+    category: "reminder",
+    priority: 83,
+    schedule: { type: "recurring" },
+    // A new day of the Boss's plan: the coach opens the step and hands over the texts.
+    when: ({ ctx, local }) => {
+      const p = plannedStep(ctx);
+      return p !== null && p !== "finished" && p.opensNew && local.hour >= 9 && local.hour < 20;
+    },
+    template: () => NUDGES.playbook_step,
+    onSent: async ({ ctx, coach }, svc) => void (await svc.openStep(ctx, coach)),
+  },
+  {
     id: "follow_up",
     category: "reminder",
     priority: 89,
@@ -160,7 +185,7 @@ export const TRIGGERS: Trigger[] = [
     category: "reminder",
     priority: 80,
     schedule: { type: "series", gapsDays: [2, 4] },
-    when: ({ ctx }) => ctx.stage === "needs_socials" && ctx.boss.brandLaunchedAt !== null,
+    when: (i) => i.ctx.stage === "needs_socials" && i.ctx.boss.brandLaunchedAt !== null && !inPlan(i),
     template: (_, step) => [NUDGES.agent_socials_1, NUDGES.agent_socials_2, NUDGES.agent_socials_3][step]!,
   },
   {
@@ -169,7 +194,7 @@ export const TRIGGERS: Trigger[] = [
     priority: 78,
     schedule: { type: "series", gapsDays: [3, 7] },
     // Give a brand-new Boss one day to settle in (they get the welcome first).
-    when: (i) => i.ctx.stage === "not_activated" && (launchedDaysAgo(i) ?? -1) >= 1,
+    when: (i) => i.ctx.stage === "not_activated" && (launchedDaysAgo(i) ?? -1) >= 1 && !inPlan(i),
     template: (_, step) => [NUDGES.agent_activate_1, NUDGES.agent_activate_2, NUDGES.agent_activate_3][step]!,
   },
   {
@@ -180,7 +205,7 @@ export const TRIGGERS: Trigger[] = [
     // For engaged Bosses only (inactive ones get "come back" first); at most once a week.
     when: (i) => {
       const { coach, ctx, lastSent, state, local } = i;
-      if (coach.state.intensity === "light") return false;
+      if (coach.state.intensity === "light" || coach.state.playbook?.status === "active") return false; // a plan ends with its own goal
       if (local.weekday !== 3 && local.weekday !== 5) return false; // Wed/Fri: Monday is for weekly coaching
       if (coach.state.goal?.status === "active" || (launchedDaysAgo(i) ?? 0) < 3) return false;
       const lastSeen = Math.max(
@@ -203,7 +228,7 @@ export const TRIGGERS: Trigger[] = [
     category: "reminder",
     priority: 72,
     schedule: { type: "series", gapsDays: [3, 5] },
-    when: (i) => i.ctx.boss.stats.totalPlayers === 0 && (launchedDaysAgo(i) ?? -1) >= 2,
+    when: (i) => i.ctx.boss.stats.totalPlayers === 0 && (launchedDaysAgo(i) ?? -1) >= 2 && !inPlan(i),
     template: (_, step) => [NUDGES.no_players_1, NUDGES.no_players_2, NUDGES.no_players_3][step]!,
   },
   {
@@ -212,10 +237,11 @@ export const TRIGGERS: Trigger[] = [
     priority: 70,
     // One alert per drop; the series resets once new players recover.
     schedule: { type: "series", gapsDays: [] },
-    when: ({ coach }) =>
-      coach.state.intensity !== "light" &&
-      (coach.insights.newPlayers.previous ?? 0) >= 5 &&
-      (coach.insights.newPlayers.changePct ?? 0) <= -30,
+    when: (i) =>
+      i.coach.state.intensity !== "light" &&
+      !inPlan(i) &&
+      (i.coach.insights.newPlayers.previous ?? 0) >= 5 &&
+      (i.coach.insights.newPlayers.changePct ?? 0) <= -30,
     template: () => NUDGES.momentum_drop,
     onSent: assignPlannedMission,
   },
@@ -239,8 +265,7 @@ export const TRIGGERS: Trigger[] = [
     category: "reminder",
     priority: 60,
     schedule: { type: "series", gapsDays: [7, 9] },
-    when: ({ ctx }) =>
-      ctx.boss.brandLaunchedAt !== null && (daysBetween(ctx.boss.lastActiveAt, ctx.now) ?? 0) >= 7,
+    when: (i) => i.ctx.boss.brandLaunchedAt !== null && (daysBetween(i.ctx.boss.lastActiveAt, i.ctx.now) ?? 0) >= 7 && !inPlan(i),
     template: (_, step) => [NUDGES.inactive_1, NUDGES.inactive_2, NUDGES.inactive_3][step]!,
   },
   {
@@ -266,6 +291,7 @@ export const TRIGGERS: Trigger[] = [
       const days: readonly number[] = MISSION_DAYS[coach.state.intensity];
       if (!days.includes(local.weekday) || local.hour < 9 || local.hour >= 20) return false;
       if (!ctx.boss.brandLaunchedAt || coach.todayMission) return false;
+      if (coach.state.playbook?.status === "active") return false; // the plan's step is the mission
       return hoursSince(lastSent("daily_mission"), ctx.now) >= 20;
     },
     template: () => NUDGES.daily_mission,

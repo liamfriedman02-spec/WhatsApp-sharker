@@ -7,9 +7,11 @@ import { parseTelegramUpdate, type TgUpdate } from "./updates.js";
 
 export const TELEGRAM_COMMANDS = [
   { command: "menu", description: "Main menu" },
+  { command: "plan", description: "My sprint or campaign today" },
   { command: "mission", description: "Today's mission" },
+  { command: "texts", description: "Ready-to-send invites and posts" },
+  { command: "money", description: "How many players my target takes" },
   { command: "progress", description: "My goal, level and streak" },
-  { command: "post", description: "Write me a post" },
   { command: "help", description: "Get help" },
 ];
 

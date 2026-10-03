@@ -12,7 +12,11 @@ export type DigestPref = "daily" | "weekly" | "off";
  */
 export type ConversationMode = "bot" | "awaiting_handoff" | "human";
 
-export type Flow = { type: "guide"; guideId: string; step: number };
+/**
+ * guide – the Boss is inside a step-by-step guide
+ * ask   – the bot asked a question the next free text answers (who to invite, how much to earn)
+ */
+export type Flow = { type: "guide"; guideId: string; step: number } | { type: "ask"; ask: "audience" | "money" };
 
 export interface BossState {
   bossId: string;

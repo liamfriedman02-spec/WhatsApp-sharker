@@ -14,11 +14,12 @@
  */
 import { goalStatusLine, describeProposal, formatAmount } from "../coach/goals.js";
 import { formatChange } from "../coach/insights.js";
-import { lowerFirst, plannedMission, plannedProposal } from "../coach/plan.js";
+import { lowerFirst, plannedMission, plannedProposal, plannedStep, stepMission } from "../coach/plan.js";
 import { money, num, plural, networkName } from "../util/format.js";
 import type { ContentCtx } from "./context.js";
 import { levelName, nextLevelNeeds } from "./levels.js";
 import type { CtaId } from "./links.js";
+import { getPlaybook } from "./playbooks.js";
 
 export type TemplateCategory = "MARKETING" | "UTILITY";
 
@@ -52,6 +53,15 @@ const MENU = { title: "🏠 Menu", payload: "menu:main" };
 
 const first = (c: ContentCtx) => c.boss.firstName;
 const brand = (c: ContentCtx) => c.boss.brandName;
+
+/** The plan step a proactive message talks about (the launch sprint's first day when there's no active plan). */
+function stepFor(c: ContentCtx) {
+  const planned = plannedStep(c);
+  if (planned && planned !== "finished") return { playbook: planned.playbook, index: planned.index, step: planned.step, mission: stepMission(c, planned) };
+  const playbook = getPlaybook(c.coach?.state.playbook?.id ?? "launch") ?? getPlaybook("launch")!;
+  const step = playbook.steps[0]!;
+  return { playbook, index: 0, step, mission: stepMission(c, { playbook, index: 0, step, opensNew: true }) };
+}
 
 /** Short, param-safe description of the Agent's state for digests. */
 export function agentSummary(ctx: ContentCtx): string {
@@ -90,10 +100,12 @@ export const NUDGES = {
     body:
       "🎉 *Your first player is here!*\n\n" +
       "Someone just joined *{{1}}* — your brand, your player.\n\n" +
-      "Keep the momentum going: share your brand link again today and bring the next one.",
+      "Two things now: send them a welcome (I have the text ready), then share your link again today and bring the next one.",
     params: (c) => [brand(c)],
     example: ["Ana Arena"],
     cta: "brand_link",
+    sessionLinkInline: true,
+    quickReplies: [{ title: "👋 Welcome text", payload: "invite:welcome" }],
   },
   first_earnings: {
     name: "boss_first_earnings",
@@ -224,12 +236,13 @@ export const NUDGES = {
     category: "MARKETING",
     body:
       "👥 *Let's get your first player, {{1}}*\n\n" +
-      "*{{2}}* is live, but no players have joined yet.\n\n" +
-      "The fastest way: share your brand link on your WhatsApp status and in 3 groups today.",
+      "*{{2}}* is live, but no players have joined yet. Here's how we fix that: 7 days, one 10-minute step a day, every text written for you.\n\n" +
+      "Day 1 is ready. Shall we?",
     params: (c) => [first(c), brand(c)],
     example: ["Ana", "Ana Arena"],
     cta: "brand_link",
-    quickReplies: [{ title: "Guide me", payload: "guide:share_link" }],
+    sessionLinkInline: true,
+    quickReplies: [{ title: "🚀 Start the sprint", payload: "play:start:launch" }],
     footer: STOP_FOOTER,
   },
   no_players_2: {
@@ -341,6 +354,47 @@ export const NUDGES = {
     example: ["Carla Kingdom", "31", "+24% vs last week", "$612.30", "+12% vs last week", "💎 Pro", "18/40 new players · on track ✅", "bring 5 players back"],
     cta: "dashboard",
     quickReplies: [{ title: "📊 Full coaching", payload: "coach:session" }],
+  },
+
+  // ── Playbooks ─────────────────────────────────────────────────────────────
+  playbook_step: {
+    name: "boss_playbook_step",
+    category: "MARKETING",
+    body:
+      "🚀 *{{1}}* · Day {{2}}\n\n" +
+      "{{3}}\n\n" +
+      "🎯 *Today:* {{4}}\n\n" +
+      "Your texts for today are ready. Tap below and I hand them over.",
+    params: (c) => {
+      const s = stepFor(c);
+      return [s.playbook.title, `${s.index + 1} of ${s.playbook.steps.length}`, s.step.brief(c, c.coach!.state), s.mission.task];
+    },
+    example: ["7-day launch sprint", "2 of 7", "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status.", "Send your brand link to 3 WhatsApp groups where people know you."],
+    cta: "hub_home",
+    ctaFor: (c) => stepFor(c).mission.cta ?? "hub_home",
+    sessionLinkInline: true,
+    quickReplies: [
+      { title: "🚀 Open today's step", payload: "play:today" },
+      { title: "✅ Done", payload: "mission:done" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  playbook_done: {
+    name: "boss_playbook_done",
+    category: "UTILITY",
+    body:
+      "🏁 *{{1}} complete, {{2}}!*\n\n" +
+      "{{3}} days of real work on *{{4}}*. That's how brands get built.\n\n" +
+      "Next: your goal for the month, from your own numbers. Tap below and we set it.",
+    params: (c) => {
+      const pb = getPlaybook(c.coach?.state.playbook?.id ?? "launch") ?? getPlaybook("launch")!;
+      return [pb.title, first(c), num(pb.steps.length), brand(c)];
+    },
+    example: ["7-day launch sprint", "Ana", "7", "Ana Arena"],
+    quickReplies: [
+      { title: "🎯 Set my goal", payload: "goal:new" },
+      { title: "📣 Next campaign", payload: "play:menu" },
+    ],
   },
 
   // ── Coaching ──────────────────────────────────────────────────────────────

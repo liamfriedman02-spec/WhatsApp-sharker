@@ -55,8 +55,8 @@ const MIN_GAP_BETWEEN_NUDGES_MS = 3 * HOUR;
 const MIN_GAP_BETWEEN_REMINDERS_MS = 12 * HOUR;
 /** Reminders/summaries per rolling 7 days, by coaching intensity (celebrations and requested check-ins excluded). */
 const WEEKLY_REMINDER_CAP: Record<CoachIntensity, number> = { light: 2, standard: 4, intense: 7 };
-/** The Boss asked for these check-ins, so they don't use the weekly budget. */
-const REQUESTED_TRIGGERS = new Set(["follow_up"]);
+/** The Boss asked for these (check-ins, a plan they started), so they don't use the weekly budget. */
+const REQUESTED_TRIGGERS = new Set(["follow_up", "playbook_step"]);
 /** Stay safely inside WhatsApp's 24h customer-service window for free-form messages. */
 const SESSION_WINDOW_MS = 24 * HOUR - 15 * 60_000;
 

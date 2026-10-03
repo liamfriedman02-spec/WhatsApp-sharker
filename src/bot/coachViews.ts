@@ -10,6 +10,7 @@ import type { ContentCtx } from "../content/context.js";
 import { levelName, nextLevelNeeds } from "../content/levels.js";
 import { ctaLink } from "../content/links.js";
 import type { MissionDef } from "../content/missions.js";
+import { LINK_PLACEHOLDER, fallbackPosts } from "../content/posts.js";
 import { num, plural, shortDate } from "../util/format.js";
 import { DAY } from "../util/time.js";
 import type { Button, OutboundMessage } from "../whatsapp/types.js";
@@ -161,18 +162,7 @@ export function coachSessionMessage(ctx: ContentCtx, coach: CoachView, mission: 
   };
 }
 
-const LINK_PLACEHOLDER = "[your brand link]";
-
-/** Ready-to-post texts when the AI writer is unavailable. */
-export function fallbackPosts(ctx: ContentCtx): string[] {
-  const b = ctx.boss.brandName;
-  const tag = b.replace(/[^\p{L}\p{N}]/gu, "");
-  return [
-    `🔥 *${b}* is live! Come join me 👉 {link}`,
-    `Big news: ${b} is officially live 🎉 I built it for us — come join me through the link in my bio. See you inside! #${tag}`,
-    `POV: you finally launch your own brand 👑 ${b} is live — link in bio. Who's joining me first? 👇`,
-  ];
-}
+export { fallbackPosts };
 
 export function postsMessages(ctx: ContentCtx, posts: string[]): OutboundMessage[] {
   const link = ctx.boss.brandUrl || LINK_PLACEHOLDER;

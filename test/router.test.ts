@@ -3,7 +3,7 @@ import { NO_ACTIONS, type Assistant, type AssistantAnswer } from "../src/ai/assi
 import type { LogSupportDesk } from "../src/bot/handoff.js";
 import { HUB, PHONES, harness, ids, textOf } from "./helpers.js";
 
-const answer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "ok", cta: null, guide: null, escalate: false, actions: NO_ACTIONS, ...a });
+const answer = (a: Partial<AssistantAnswer>): AssistantAnswer => ({ reply: "ok", cta: null, guide: null, escalate: false, buttons: [], actions: NO_ACTIONS, ...a });
 
 describe("conversation basics", () => {
   it("tells unknown numbers they aren't linked to a Boss account", async () => {
@@ -19,9 +19,10 @@ describe("conversation basics", () => {
     expect(menu?.kind).toBe("list");
     expect(textOf(menu)).toContain("Hi Ana!");
     expect(textOf(menu)).toContain("*Ana Arena*");
-    expect(textOf(menu)).toContain("activate your AI Marketing Agent");
+    expect(textOf(menu)).toContain("Here's the plan for *Ana Arena* today");
+    expect(textOf(menu)).toContain("Activate your AI Marketing Agent");
     expect(ids(menu)).toEqual(
-      expect.arrayContaining(["mission:today", "coach:progress", "menu:business", "menu:ai_agent", "post:write", "menu:learn", "menu:help", "handoff:start"]),
+      expect.arrayContaining(["play:start:launch", "mission:today", "coach:progress", "menu:business", "menu:ai_agent", "channels:menu", "texts:menu", "money:menu", "menu:learn", "menu:help"]),
     );
   });
 
@@ -101,8 +102,8 @@ describe("support", () => {
     const [ans] = await h.text(PHONES.diego, "when do I get paid?");
     expect(textOf(ans)).toContain("When do I get paid?");
     const [confused] = await h.text(PHONES.diego, "blorp zzz");
-    expect(textOf(confused)).toContain("not sure I understood");
-    expect(ids(confused)).toContain("handoff:start");
+    expect(textOf(confused)).toContain("didn't catch that");
+    expect(ids(confused)).toEqual(["mission:today", "menu:help", "handoff:start"]);
   });
 
   it("business snapshot shows Your players / Your earnings / Your AI Agent", async () => {
@@ -252,7 +253,7 @@ describe("AI assistant", () => {
       ),
     });
     const [guide] = await h.text(PHONES.bruno, "how do I connect tiktok?");
-    expect(ids(guide)).toEqual(["guide:connect_socials", "menu:main"]);
+    expect(ids(guide)).toEqual(["guide:connect_socials", "mission:today", "menu:main"]);
     const [esc] = await h.text(PHONES.bruno, "my payout never arrived");
     expect(ids(esc)).toContain("handoff:start");
   });

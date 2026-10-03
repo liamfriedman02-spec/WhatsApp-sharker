@@ -32,7 +32,26 @@ import { CoachService } from "../src/coach/service.js";
 import { InMemoryPlatform } from "../src/platform/mockPlatform.js";
 import { silentLogger } from "../src/logger.js";
 import { coachSessionMessage, goalProposalMessage, missionMessage, postsMessages, progressMessage, fallbackPosts } from "../src/bot/coachViews.js";
-import { MISSIONS } from "../src/content/missions.js";
+import {
+  audienceQuestion,
+  channelsMessage,
+  inviteFor,
+  inviteMessages,
+  moneyAnswerMessage,
+  moneyAskMessage,
+  moneyMenu,
+  playbookDoneMessage,
+  playbookMenu,
+  playbookOfferMessage,
+  playbookStoppedMessage,
+  playerTextMessages,
+  stepMessages,
+  textsMenu,
+} from "../src/bot/playViews.js";
+import { moneyMath } from "../src/coach/money.js";
+import { AUDIENCES } from "../src/content/invites.js";
+import { MISSIONS, getMission } from "../src/content/missions.js";
+import { PLAYBOOKS } from "../src/content/playbooks.js";
 import { proposeGoal } from "../src/coach/goals.js";
 
 const bosses = demoBosses(MONDAY_NOON.getTime());
@@ -50,14 +69,32 @@ const triggerInput = (ctx: (typeof ctxs)[number]) => ({ ctx, coach: ctx.coach!, 
 
 /** Every reply id the router understands. */
 const ROUTABLE =
-  /^(menu:\w+|nba|learn:\w+|help:\w+|faq:\w+|feedback:(solved|unsolved):\w+|guide:\w+|guide_step:(done|stuck|exit|check)|handoff:(start|cancel|close)|settings:(digest:(daily|weekly|off)|coach:(light|standard|intense)|pause|resume)|ask:ai|mission:(today|done|skip|bonus|help)|goal:(accept|higher|lower|new)|coach:(progress|session)|post:write|followup:(done|notyet)|demo:(ana|bruno|carla|diego))$/;
+  /^(menu:\w+|nba|learn:\w+|help:\w+|faq:\w+|feedback:(solved|unsolved):\w+|guide:\w+|guide_step:(done|stuck|exit|check)|handoff:(start|cancel|close)|settings:(digest:(daily|weekly|off)|coach:(light|standard|intense)|pause|resume)|ask:ai|mission:(today|done|skip|bonus|help)|goal:(accept|higher|lower|new)|coach:(progress|session)|post:write|followup:(done|notyet)|demo:(ana|bruno|carla|diego)|play:(today|next|stop|menu|start:(launch|friend_week|comeback_week|channel_week))|invite:(family|friends|work|community|online|welcome|referral|followup|comeback)|texts:menu|money:(menu|\d+)|channels:menu)$/;
 
 function allViews(): OutboundMessage[] {
   const store = new SqliteStore(":memory:");
-  const out: OutboundMessage[] = [learnMenu(), helpMenu(), demoMenu(), demoMenu(DEMO_PERSONAS[0]!.title)];
+  const out: OutboundMessage[] = [learnMenu(), helpMenu(), demoMenu(), demoMenu(DEMO_PERSONAS[0]!.title), audienceQuestion(), playbookStoppedMessage(), moneyAskMessage()];
   for (const c of FAQ_CATEGORIES) out.push(faqCategoryMenu(c.id));
   for (const ctx of ctxs) {
-    out.push(mainMenu(ctx), mainMenu({ ...ctx, demo: true }),businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
+    const state = ctx.coach!.state;
+    out.push(mainMenu(ctx), mainMenu({ ...ctx, demo: true }), businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
+    out.push(textsMenu(ctx), channelsMessage(ctx, state), moneyMenu(ctx), playbookMenu(ctx, state), ...inviteMessages(ctx, AUDIENCES.map((a) => inviteFor(ctx, a))));
+    for (const kind of ["welcome", "referral", "followup", "comeback"]) out.push(...playerTextMessages(ctx, kind)!);
+    for (const amount of [100, 300, 1000, 50_000]) out.push(moneyAnswerMessage(ctx, moneyMath(ctx, ctx.coach!.insights, amount), state));
+    for (const pb of PLAYBOOKS) {
+      out.push(playbookOfferMessage(ctx, pb), playbookDoneMessage(ctx, pb, ctx.coach!));
+      // Every step of every plan, as the Boss sees it that day (open) and once it's done.
+      pb.steps.forEach((step, index) => {
+        const def = getMission(step.mission(ctx, state))!;
+        for (const status of ["open", "done"] as const) {
+          const record = { id: 1, bossId: ctx.boss.id, missionId: def.id, date: ctx.coach!.today, status, assignedAt: MONDAY_NOON.toISOString(), completedAt: null };
+          out.push(...stepMessages(ctx, { playbook: pb, index, step, mission: { record, def }, opened: true }, ctx.coach!));
+        }
+      });
+      // The main menu and the campaign list with this plan active.
+      const active = { ...ctx, coach: { ...ctx.coach!, state: { ...state, playbook: { id: pb.id, step: 0, stepDate: ctx.coach!.today, startedAt: "", status: "active" as const } } } };
+      out.push(mainMenu(active), playbookMenu(active, active.coach.state));
+    }
     out.push(progressMessage(ctx, ctx.coach!), coachSessionMessage(ctx, ctx.coach!, MISSIONS[0]!), ...postsMessages(ctx, fallbackPosts(ctx)));
     out.push(goalProposalMessage(ctx, proposeGoal(ctx.boss, ctx.coach!.insights, MONDAY_NOON), ctx.coach!));
     for (const m of MISSIONS) out.push(missionMessage(ctx, m, ctx.coach!));

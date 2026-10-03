@@ -6,10 +6,14 @@ import { bossAddress, telegramAddress } from "../channels.js";
 import { personaId, type DemoPlatform } from "../platform/demoPlatform.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
+import { moneyGoal, moneyMath, parseAmount } from "../coach/money.js";
 import { getFaq, type FaqCategoryId, FAQ_CATEGORIES } from "../content/faq.js";
 import { getGuide, type Guide } from "../content/guides.js";
+import { getAudience, matchAudiences, type Audience } from "../content/invites.js";
 import { ctaLink } from "../content/links.js";
 import { nextBestAction } from "../content/nextBestAction.js";
+import { getPlaybook, proposePlaybook } from "../content/playbooks.js";
+import { QUICK_BUTTONS, isQuickButton, type QuickButtonId } from "../content/quickButtons.js";
 import { getTopic } from "../content/topics.js";
 import type { Logger } from "../logger.js";
 import type { BossProfile, SharkerPlatform } from "../platform/types.js";
@@ -17,7 +21,7 @@ import type { BossState, Handoff, Store } from "../store/store.js";
 import { shortDate } from "../util/format.js";
 import { HOUR } from "../util/time.js";
 import { renderMessage } from "../whatsapp/consoleMessenger.js";
-import { LIMITS, type InboundMessage, type Messenger, type OutboundMessage } from "../whatsapp/types.js";
+import { LIMITS, type Button, type InboundMessage, type Messenger, type OutboundMessage } from "../whatsapp/types.js";
 import {
   coachSessionMessage,
   fallbackPosts,
@@ -32,7 +36,22 @@ import {
   streakLine,
 } from "./coachViews.js";
 import { bossSummary, type SupportDesk } from "./handoff.js";
-import { isAffirmative, matchCommand, searchKnowledge } from "./intents.js";
+import { isAffirmative, isDoneReport, matchCommand, searchKnowledge } from "./intents.js";
+import {
+  channelsMessage,
+  inviteFor,
+  inviteMessages,
+  moneyAnswerMessage,
+  moneyMenu,
+  playbookDoneMessage,
+  playbookMenu,
+  playbookOfferMessage,
+  playbookStoppedMessage,
+  playerTextMessages,
+  stepMessages,
+  textsMenu,
+  type Invite,
+} from "./playViews.js";
 import {
   BTN,
   aiAgentMessages,
@@ -222,7 +241,7 @@ export class BotRouter {
       return this.forwardToHuman(t, text);
     }
 
-    if (t.state.flow && isAffirmative(text)) return this.guideDone(t);
+    if (t.state.flow?.type === "guide" && isAffirmative(text)) return this.guideDone(t);
     if (cmd) t.state.flow = null;
 
     switch (cmd) {
@@ -246,7 +265,19 @@ export class BotRouter {
         return this.showProgress(t);
       case "post":
         return this.writePosts(t);
+      case "plan":
+        return this.showPlan(t);
+      case "texts":
+        return this.push(t, textsMenu(t.ctx));
+      case "money":
+        return this.askMoney(t);
+      case "channels":
+        return this.push(t, channelsMessage(t.ctx, t.coach.state));
       default:
+        // The bot asked something (who to invite, how much to earn): this message answers it.
+        if (t.state.flow?.type === "ask") return this.answerAsk(t, text);
+        // "sent it" / "done" completes today's mission without a tap.
+        if (isDoneReport(text) && t.coach.todayMission?.record.status === "open") return this.onMission(t, "done");
         return this.answerFreeText(t, text);
     }
   }
@@ -268,6 +299,16 @@ export class BotRouter {
         return this.writePosts(t);
       case "followup":
         return this.onFollowUpReply(t, arg === "done");
+      case "play":
+        return this.onPlay(t, arg ?? "", extra);
+      case "invite":
+        return this.onInvite(t, arg ?? "");
+      case "texts":
+        return this.push(t, textsMenu(t.ctx));
+      case "money":
+        return this.onMoney(t, arg ?? "");
+      case "channels":
+        return this.push(t, channelsMessage(t.ctx, t.coach.state));
       case "demo":
         return this.switchDemo(t, arg ?? "");
       case "learn": {
@@ -411,7 +452,7 @@ export class BotRouter {
   }
 
   private async guideDone(t: Turn, recheck = false): Promise<void> {
-    const flow = t.state.flow;
+    const flow = t.state.flow?.type === "guide" ? t.state.flow : null;
     const guide = flow ? getGuide(flow.guideId) : undefined;
     if (!flow || !guide) {
       t.state.flow = null;
@@ -445,6 +486,8 @@ export class BotRouter {
   private async finishGuide(t: Turn, guide: Guide): Promise<void> {
     t.state.flow = null;
     this.deps.logger.info("guide completed", { bossId: t.boss.id, guide: guide.id });
+    // Opening a marketing channel is remembered, so the coach moves on to the next one.
+    if (guide.channel) await this.deps.coach.markChannel(t.boss.id, t.coach, guide.channel, t.ctx.now);
     // Finishing the guide for today's mission completes the mission too.
     const m = t.coach.todayMission;
     if (m && m.record.status === "open" && m.def.guide === guide.id) {
@@ -499,6 +542,124 @@ export class BotRouter {
     this.deps.logger.info("demo profile switched", { bossId: boss.id });
     this.push(t, { kind: "text", text: `🧪 You're now testing as *${boss.firstName}* — *${boss.brandName}*.\n${p.description}` });
     this.push(t, mainMenu(t.ctx));
+  }
+
+  // ── Plans: launch sprint & campaigns ──────────────────────────────────────
+
+  /** Today's step of the active plan; otherwise the plan the coach would start now. */
+  private async showPlan(t: Turn): Promise<void> {
+    const state = t.coach.state;
+    if (state.playbook?.status === "active") return this.openStep(t);
+    const proposed = proposePlaybook(t.ctx, state);
+    if (proposed) return this.push(t, playbookOfferMessage(t.ctx, proposed));
+    return this.push(t, playbookMenu(t.ctx, state));
+  }
+
+  private async onPlay(t: Turn, action: string, id?: string): Promise<void> {
+    const coach = this.deps.coach;
+    switch (action) {
+      case "start": {
+        const pb = getPlaybook(id ?? "");
+        const opened = pb ? await coach.startPlaybook(t.ctx, t.coach, pb.id) : null;
+        if (!pb || !opened) return this.push(t, playbookMenu(t.ctx, t.coach.state));
+        this.deps.logger.info("playbook started", { bossId: t.boss.id, playbook: pb.id });
+        this.push(t, { kind: "text", text: `${pb.emoji} *${pb.title}* starts now. ${pb.steps.length} days — I lead, you send. Let's go.` });
+        if (opened.step.ask === "audience") t.state.flow = { type: "ask", ask: "audience" };
+        return this.pushAll(t, stepMessages(t.ctx, opened, t.coach));
+      }
+      case "today":
+        return this.openStep(t);
+      case "next":
+        return this.openStep(t, true);
+      case "stop":
+        await coach.finishPlaybook(t.boss.id, t.coach, "stopped");
+        return this.push(t, playbookStoppedMessage());
+      default:
+        return this.push(t, playbookMenu(t.ctx, t.coach.state));
+    }
+  }
+
+  private async openStep(t: Turn, advance = false): Promise<void> {
+    const r = await this.deps.coach.openStep(t.ctx, t.coach, { advance });
+    if (r === null) return this.push(t, playbookMenu(t.ctx, t.coach.state));
+    if ("finished" in r) return this.push(t, playbookDoneMessage(t.ctx, r.finished, t.coach));
+    if (r.step.ask === "audience" && r.mission.record.status !== "done") t.state.flow = { type: "ask", ask: "audience" };
+    return this.pushAll(t, stepMessages(t.ctx, r, t.coach));
+  }
+
+  // ── Texts: invites, welcome, follow-ups ───────────────────────────────────
+
+  private async onInvite(t: Turn, which: string): Promise<void> {
+    const audience = getAudience(which);
+    if (audience) {
+      await this.deps.coach.addAudiences(t.boss.id, t.coach, [audience.id]);
+      return this.pushAll(t, await this.invitesFor(t, [audience]));
+    }
+    const player = playerTextMessages(t.ctx, which);
+    return player ? this.pushAll(t, player) : this.push(t, textsMenu(t.ctx));
+  }
+
+  /** Built-in invites, or Claude's version in the Boss's voice when it's available (one audience at a time). */
+  private async invitesFor(t: Turn, audiences: Audience[]): Promise<OutboundMessage[]> {
+    const invites: Invite[] = [];
+    for (const a of audiences) {
+      const ai = audiences.length === 1 ? await this.aiInvite(t, a.description) : null;
+      invites.push(ai ? { title: a.title, text: ai } : inviteFor(t.ctx, a));
+    }
+    return inviteMessages(t.ctx, invites);
+  }
+
+  private async aiInvite(t: Turn, audience: string): Promise<string | null> {
+    const { assistant, config } = this.deps;
+    if (!assistant?.writeInvite || !config.ai.enabled || !this.allowAi(t.boss.id)) return null;
+    return assistant.writeInvite({ ctx: t.ctx, audience });
+  }
+
+  /** The Boss answered a question the bot asked in free text. */
+  private async answerAsk(t: Turn, text: string): Promise<void> {
+    const ask = t.state.flow?.type === "ask" ? t.state.flow.ask : null;
+    t.state.flow = null;
+    if (ask === "audience") {
+      const found = matchAudiences(text);
+      if (found.length > 0) {
+        await this.deps.coach.addAudiences(t.boss.id, t.coach, found.map((a) => a.id));
+        return this.pushAll(t, await this.invitesFor(t, found.slice(0, 3)));
+      }
+      // Their own words ("my yoga class") → remember it and write for it.
+      const who = text.slice(0, 60);
+      await this.deps.coach.addAudiences(t.boss.id, t.coach, [who]);
+      const ai = await this.aiInvite(t, text);
+      if (ai) return this.pushAll(t, inviteMessages(t.ctx, [{ title: who, text: ai }]));
+      const friends = getAudience("friends")!;
+      this.push(t, { kind: "text", text: `Got it — ${who}. Here's an invite that works for people who know you. Change a word if you like, then send it to 5 of them.` });
+      return this.pushAll(t, inviteMessages(t.ctx, [inviteFor(t.ctx, friends)]));
+    }
+    if (ask === "money") {
+      const amount = parseAmount(text);
+      if (amount) return this.answerMoney(t, amount);
+    }
+    return this.answerFreeText(t, text);
+  }
+
+  // ── Earnings math ─────────────────────────────────────────────────────────
+
+  private askMoney(t: Turn): void {
+    t.state.flow = { type: "ask", ask: "money" };
+    return this.push(t, moneyMenu(t.ctx));
+  }
+
+  private async onMoney(t: Turn, arg: string): Promise<void> {
+    const amount = parseAmount(arg);
+    return amount ? this.answerMoney(t, amount) : this.askMoney(t);
+  }
+
+  /** Target per month → players needed, from the Boss's own numbers; becomes the proposed goal. */
+  private async answerMoney(t: Turn, amount: number): Promise<void> {
+    const m = moneyMath(t.ctx, t.coach.insights, amount);
+    t.coach.state.pendingGoal = moneyGoal(m, t.ctx.now);
+    await this.deps.coach.save(t.boss.id, t.coach.state);
+    this.deps.logger.info("earnings math", { bossId: t.boss.id, target: amount, kind: m.kind });
+    return this.push(t, moneyAnswerMessage(t.ctx, m, t.coach.state));
   }
 
   // ── Coaching ──────────────────────────────────────────────────────────────
@@ -650,18 +811,34 @@ export class BotRouter {
       }
     }
 
+    // "I want to earn 500 a month" → the earnings math, not the FAQ about earnings.
+    const amount = /\b(earn|make|money|month|target)\b/i.test(text) ? parseAmount(text) : null;
+    if (amount) return this.answerMoney(t, amount);
     const match = searchKnowledge(text);
     if (match?.type === "faq") return this.pushAll(t, faqMessages(match.faq, t.ctx));
     if (match?.type === "topic") return this.pushAll(t, topicMessages(match.topic, t.ctx));
+    // Someone they could invite, named in passing ("my gym buddies") → write the invite.
+    const audiences = matchAudiences(text);
+    if (audiences.length > 0) {
+      await this.deps.coach.addAudiences(t.boss.id, t.coach, audiences.map((a) => a.id));
+      return this.pushAll(t, await this.invitesFor(t, audiences.slice(0, 2)));
+    }
     return this.push(t, {
       kind: "buttons",
-      body: "🤔 I'm not sure I understood. Pick an option below, or try asking in a different way.",
-      buttons: [BTN.help, BTN.human, BTN.menu],
+      body: "🤔 I didn't catch that. Here's what I can do right now — or ask me in a different way.",
+      buttons: [this.coachButton(t), BTN.help, BTN.human],
     });
   }
 
+  private coachButton(t: Turn): Button {
+    const id = this.defaultButtons(t)[0]!;
+    return { id, title: QUICK_BUTTONS[id] };
+  }
+
+  /** Every AI reply ends with buttons: the Boss can tap the next step or keep typing. */
   private pushAnswer(t: Turn, a: AssistantAnswer): void {
     const source = "ai";
+    const picked: Button[] = (a.buttons.length > 0 ? a.buttons : this.defaultButtons(t)).slice(0, LIMITS.maxButtons).map((id) => ({ id, title: QUICK_BUTTONS[id] }));
     if (a.escalate) {
       return this.push(t, { kind: "buttons", body: fit(a.reply), buttons: [BTN.human, BTN.menu] }, source);
     }
@@ -675,16 +852,24 @@ export class BotRouter {
       if (a.guide) {
         this.push(t, {
           kind: "buttons",
-          body: "Want me to walk you through it step by step?",
+          body: "I'll walk you through it step by step.",
           buttons: [{ id: `guide:${a.guide}`, title: "🧭 Guide me" }, BTN.menu],
         });
       }
       return;
     }
     if (a.guide) {
-      return this.push(t, { kind: "buttons", body: fit(a.reply), buttons: [{ id: `guide:${a.guide}`, title: "🧭 Guide me" }, BTN.menu] }, source);
+      const other = picked.find((b) => !b.id.startsWith("guide") && b.id !== "menu:main");
+      return this.push(t, { kind: "buttons", body: fit(a.reply), buttons: [{ id: `guide:${a.guide}`, title: "🧭 Guide me" }, ...(other ? [other] : []), BTN.menu] }, source);
     }
-    return this.push(t, { kind: "text", text: a.reply }, source);
+    if (a.reply.length <= LIMITS.interactiveBody) return this.push(t, { kind: "buttons", body: a.reply, buttons: picked }, source);
+    this.push(t, { kind: "text", text: a.reply }, source);
+    this.push(t, { kind: "buttons", body: "👇 Next:", buttons: picked }, source);
+  }
+
+  /** When the model didn't pick buttons: today's plan or mission, and the menu. */
+  private defaultButtons(t: Turn): QuickButtonId[] {
+    return [t.coach.state.playbook?.status === "active" ? "play:today" : "mission:today", "menu:main"];
   }
 
   private allowAi(bossId: string): boolean {

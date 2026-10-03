@@ -1,17 +1,29 @@
 import type { ContentCtx } from "../content/context.js";
 import { levelView, type LevelView } from "../content/levels.js";
 import { getMission, pickMission, type MissionDef } from "../content/missions.js";
+import { getPlaybook, type Playbook, type PlaybookStep } from "../content/playbooks.js";
 import type { Logger } from "../logger.js";
 import type { BossProfile, SharkerPlatform } from "../platform/types.js";
 import type { Store } from "../store/store.js";
 import { DAY, HOUR, localTime } from "../util/time.js";
 import { adjustProposal, goalView, proposeGoal, startGoal, type GoalView } from "./goals.js";
 import { addDays, computeInsights, type Insights } from "./insights.js";
+import { plannedStep, stepMission } from "./plan.js";
 import type { CoachIntensity, CoachState, FollowUp, Goal, GoalMetric, GoalProposal, MissionRecord, StatSnapshot } from "./types.js";
 
 export interface ActiveMission {
   record: MissionRecord;
   def: MissionDef;
+}
+
+/** A playbook step that is now open, with its mission assigned for today. */
+export interface OpenedStep {
+  playbook: Playbook;
+  index: number;
+  step: PlaybookStep;
+  mission: ActiveMission;
+  /** True when this call opened the step (a new day of the plan). */
+  opened: boolean;
 }
 
 /** The coach's full picture of one Boss at one moment. */
@@ -104,9 +116,14 @@ export class CoachService {
     return view.todayMission;
   }
 
-  /** Today's mission (whatever its status), or a freshly assigned one. */
+  /** Today's mission (whatever its status), or a freshly assigned one: the plan's step when a plan is active. */
   async ensureTodayMission(ctx: ContentCtx, view: CoachView): Promise<ActiveMission> {
-    return view.todayMission ?? this.assignMission(ctx, view);
+    if (view.todayMission) return view.todayMission;
+    if (view.state.playbook?.status === "active") {
+      const opened = await this.openStep(ctx, view);
+      if (opened && !("finished" in opened)) return opened.mission;
+    }
+    return this.assignMission(ctx, view);
   }
 
   /** Another mission for today, excluding everything already given today. */
@@ -131,9 +148,76 @@ export class CoachService {
       s.streak = gapDays <= 3 ? s.streak + 1 : 1;
       s.points += mission.def.points;
       s.lastMissionDoneAt = ctx.now.toISOString();
+      // Using a channel for the first time (status, groups…) marks it open for the Boss.
+      if (mission.def.channel && !s.channels[mission.def.channel]) s.channels[mission.def.channel] = ctx.now.toISOString();
       await this.save(ctx.boss.id, s);
     }
     return { status: "done", points: mission.def.points, streak: view.state.streak, totalPoints: view.state.points };
+  }
+
+  // ── Playbooks (launch sprint, campaigns) ──────────────────────────────────
+
+  /** Starts a plan today (replacing any active one) and opens its first step. */
+  async startPlaybook(ctx: ContentCtx, view: CoachView, id: string): Promise<OpenedStep | null> {
+    if (!getPlaybook(id)) return null;
+    const s = view.state;
+    if (s.playbook?.status === "active" && s.playbook.id !== id && !s.playbooksDone.includes(s.playbook.id)) s.playbooksDone.push(s.playbook.id);
+    s.playbook = { id, step: 0, stepDate: view.today, startedAt: ctx.now.toISOString(), status: "active" };
+    s.playbooksDone = s.playbooksDone.filter((x) => x !== id);
+    await this.save(ctx.boss.id, s);
+    this.deps.logger.info("coach: playbook started", { bossId: ctx.boss.id, playbook: id });
+    const opened = await this.openStep(ctx, view);
+    return opened && !("finished" in opened) ? opened : null;
+  }
+
+  /**
+   * Today's step of the active plan, opening it (and assigning its mission) when a new day
+   * started. `advance` moves on to the next step right away. Returns `{ finished }` when the
+   * plan is over (and marks it done), null without an active plan.
+   */
+  async openStep(ctx: ContentCtx, view: CoachView, opts: { advance?: boolean } = {}): Promise<OpenedStep | { finished: Playbook } | null> {
+    const withView: ContentCtx = { ...ctx, coach: view };
+    let planned = plannedStep(withView);
+    if (planned === null) return null;
+    const playbook = planned === "finished" ? getPlaybook(view.state.playbook!.id)! : planned.playbook;
+    if (planned !== "finished" && opts.advance && !planned.opensNew) {
+      const next = planned.index + 1;
+      planned = next >= playbook.steps.length ? "finished" : { playbook, index: next, step: playbook.steps[next]!, opensNew: true };
+    }
+    if (planned === "finished") {
+      await this.finishPlaybook(ctx.boss.id, view, "done");
+      return { finished: playbook };
+    }
+    if (planned.opensNew) {
+      view.state.playbook = { ...view.state.playbook!, step: planned.index, stepDate: view.today };
+      await this.save(ctx.boss.id, view.state);
+    }
+    const def = stepMission(withView, planned);
+    const current = view.todayMission;
+    const mission = current && current.def.id === def.id ? current : await this.assign(ctx, view, def);
+    return { playbook, index: planned.index, step: planned.step, mission, opened: planned.opensNew };
+  }
+
+  async finishPlaybook(bossId: string, view: CoachView, status: "done" | "stopped"): Promise<void> {
+    const pb = view.state.playbook;
+    if (!pb) return;
+    view.state.playbook = { ...pb, status };
+    if (!view.state.playbooksDone.includes(pb.id)) view.state.playbooksDone.push(pb.id);
+    await this.save(bossId, view.state);
+    this.deps.logger.info("coach: playbook finished", { bossId, playbook: pb.id, status });
+  }
+
+  async addAudiences(bossId: string, view: CoachView, ids: string[]): Promise<void> {
+    const merged = [...new Set([...view.state.audiences, ...ids.map((a) => a.trim()).filter(Boolean)])].slice(-10);
+    if (merged.length === view.state.audiences.length) return;
+    view.state.audiences = merged;
+    await this.save(bossId, view.state);
+  }
+
+  async markChannel(bossId: string, view: CoachView, channelId: string, now: Date): Promise<void> {
+    if (view.state.channels[channelId]) return;
+    view.state.channels[channelId] = now.toISOString();
+    await this.save(bossId, view.state);
   }
 
   async skipMission(bossId: string, view: CoachView, mission: ActiveMission): Promise<void> {

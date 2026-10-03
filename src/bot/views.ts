@@ -11,10 +11,11 @@ import { FAQ_CATEGORIES, faqByCategory, type FaqCategoryId, type FaqEntry } from
 import type { Guide } from "../content/guides.js";
 import { ctaLink, type CtaId } from "../content/links.js";
 import { nextBestAction } from "../content/nextBestAction.js";
+import { getPlaybook, proposePlaybook } from "../content/playbooks.js";
 import { TOPICS, nextTopic, type Topic } from "../content/topics.js";
 import type { BossState } from "../store/store.js";
 import { money, num, plural } from "../util/format.js";
-import type { Button, OutboundMessage } from "../whatsapp/types.js";
+import type { Button, ListRow, OutboundMessage } from "../whatsapp/types.js";
 
 export const BTN = {
   menu: { id: "menu:main", title: "🏠 Menu" },
@@ -25,6 +26,10 @@ export const BTN = {
   agent: { id: "menu:ai_agent", title: "🤖 My AI Agent" },
 } satisfies Record<string, Button>;
 
+/**
+ * The home screen. The coach leads: it states today's plan and the one thing to do first;
+ * the rows are there for everything else.
+ */
 export function mainMenu(ctx: ContentCtx): OutboundMessage {
   const { boss, coach } = ctx;
   const nba = nextBestAction(ctx);
@@ -40,36 +45,50 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
     coach?.state.goal?.status === "active" && coach.goal
       ? truncate(`${coach.goal.label} · level ${coach.level.current?.name ?? "Starter"}`, 72)
       : `Level ${coach?.level.current?.name ?? "Starter"} · set your goal`;
-  const streak = coach && coach.state.streak > 0 ? `
-🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
+  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
+
+  // The plan row: today's step of the active plan, or the plan the coach would start now.
+  const state = coach?.state;
+  const active = state?.playbook?.status === "active" ? getPlaybook(state.playbook.id) : undefined;
+  const proposed = coach && state && !active ? proposePlaybook(ctx, state) : null;
+  const planRow: ListRow | null = active && state?.playbook
+    ? { id: "play:today", title: `${active.emoji} My plan today`, description: truncate(`${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}: ${active.steps[state.playbook.step]?.title ?? ""}`, 72) }
+    : proposed
+      ? { id: `play:start:${proposed.id}`, title: `${proposed.emoji} ${proposed.title}`, description: proposed.description }
+      : null;
+  const planLead = active && state?.playbook ? `\n${active.emoji} ${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}` : "";
+
   return {
     kind: "list",
     header: "Your Boss Coach",
-    body: `Hi ${boss.firstName}! 👋 What do you want to do for *${boss.brandName}* today?\n\n👉 Your next step: ${nba.text}.${streak}`,
-    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "Tip: you can also just type your question",
+    body: `Hi ${boss.firstName}! 👋 Here's the plan for *${boss.brandName}* today:${planLead}\n👉 ${capitalizeFirst(nba.text)}.\n\nDo that first — everything else is ready below.${streak}`,
+    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "Tip: you can also just type to me",
     buttonLabel: "Open menu",
     sections: [
       {
-        title: "Grow your business",
+        title: "Today",
         rows: [
+          ...(planRow ? [planRow] : []),
           { id: "mission:today", title: "🎯 Today's mission", description: missionRow },
           { id: "coach:progress", title: "🏆 My goal & level", description: goalRow },
+        ],
+      },
+      {
+        title: "Grow your business",
+        rows: [
           { id: "menu:business", title: "📊 My business", description: "Your players, earnings and trends" },
           { id: "menu:ai_agent", title: "🤖 My AI Agent", description: agentRow },
-          { id: "post:write", title: "✍️ Write me a post", description: "Ready-to-post texts for your brand" },
+          { id: "channels:menu", title: "📣 My channels", description: "Open the next door for players, step by step" },
+          { id: "texts:menu", title: "💌 Texts for me", description: "Invites, welcomes and posts, ready to send" },
+          { id: "money:menu", title: "💰 Earnings math", description: "How many players your target takes" },
         ],
       },
       {
         title: "Learn & help",
         rows: [
           { id: "menu:learn", title: "🎓 Learn", description: "How your business works, step by step" },
-          { id: "menu:help", title: "💬 Get help", description: "FAQ and step-by-step support" },
-          { id: "handoff:start", title: "🙋 Talk to a human", description: "Our support team, right here" },
+          { id: "menu:help", title: "💬 Get help", description: "FAQ, support team and settings" },
         ],
-      },
-      {
-        title: "Settings",
-        rows: [{ id: "menu:settings", title: "🔔 Coaching & alerts", description: "How hard I push you, summaries" }],
       },
     ],
   };
@@ -118,10 +137,11 @@ export function helpMenu(): OutboundMessage {
         rows: FAQ_CATEGORIES.map((c) => ({ id: `help:${c.id}`, title: c.title, description: c.description })),
       },
       {
-        title: "Still stuck?",
+        title: "More",
         rows: [
           { id: "ask:ai", title: "✍️ Ask a question", description: "Type it in your own words" },
           { id: "handoff:start", title: "🙋 Talk to a human", description: "Our support team, right here" },
+          { id: "menu:settings", title: "🔔 Coaching & alerts", description: "How hard I push you, summaries, pause" },
         ],
       },
     ],

@@ -11,7 +11,8 @@
 import type { GoalMetric, MissionRecord } from "../coach/types.js";
 import type { Insights } from "../coach/insights.js";
 import { agentStage, type BossProfile } from "../platform/types.js";
-import { DAY } from "../util/time.js";
+import { DAY, daysBetween } from "../util/time.js";
+import type { ChannelId } from "./channels.js";
 import type { ContentCtx } from "./context.js";
 import type { GuideId } from "./guides.js";
 import type { CtaId } from "./links.js";
@@ -40,9 +41,12 @@ export interface MissionDef {
   cooldownDays?: number;
   /** Only ever completed once (e.g. adding the link to a bio). */
   once?: boolean;
+  /** Completing it means this marketing channel is in use. */
+  channel?: ChannelId;
 }
 
 const goalIs = (m: MissionInput, metric: GoalMetric) => (m.goalMetric === metric ? 1 : 0);
+const launchedDays = (m: MissionInput) => daysBetween(m.ctx.boss.brandLaunchedAt, m.ctx.now) ?? 99;
 
 export const MISSIONS: MissionDef[] = [
   {
@@ -115,6 +119,7 @@ export const MISSIONS: MissionDef[] = [
     cta: "brand_link",
     guide: "share_link",
     points: 15,
+    channel: "whatsapp_groups",
     score: (m) => 46 + 15 * goalIs(m, "players") + (m.ctx.boss.stats.totalPlayers < 10 ? 10 : 0),
   },
   {
@@ -124,6 +129,7 @@ export const MISSIONS: MissionDef[] = [
     why: "Everyone who has your number sees it — your easiest free reach.",
     cta: "brand_link",
     points: 10,
+    channel: "whatsapp_status",
     score: (m) => 42 + 15 * goalIs(m, "players") + (m.ctx.boss.stats.totalPlayers < 10 ? 10 : 0),
     cooldownDays: 2,
   },
@@ -165,6 +171,55 @@ export const MISSIONS: MissionDef[] = [
     cta: "agent_view",
     points: 10,
     score: (m) => (m.ctx.stage === "live" && m.ctx.boss.aiAgent.postsPublished7d > 0 ? 34 : 0),
+  },
+  {
+    id: "welcome_players",
+    title: "Welcome your new players",
+    task: "Send a personal welcome message to every player who joined this week.",
+    why: "A player who feels welcome plays — and activity is your earnings.",
+    cta: "players",
+    points: 10,
+    score: (m) => (m.ctx.boss.stats.newPlayers7d > 0 && m.ctx.boss.stats.totalPlayers <= 30 ? 38 : 0),
+  },
+  {
+    id: "second_touch",
+    title: "Follow up with the people you invited",
+    task: "Message the people you invited who haven't joined yet — one friendly reminder, no pressure.",
+    why: "Most people join on the second message, not the first.",
+    cta: "brand_link",
+    points: 15,
+    score: (m) => (launchedDays(m) <= 30 && m.ctx.boss.stats.totalPlayers < 20 ? 32 : 0),
+    cooldownDays: 4,
+  },
+  {
+    id: "ask_referral",
+    title: "Ask 3 players to bring a friend",
+    task: "Ask 3 of your players to bring one friend each, with your brand link ready to forward.",
+    why: "A player's friend is your cheapest new player — and friends keep each other playing.",
+    cta: "players",
+    points: 20,
+    score: (m) => (m.ctx.boss.stats.activePlayers7d >= 2 ? 30 + 10 * goalIs(m, "players") : 0),
+    cooldownDays: 5,
+  },
+  {
+    id: "open_channel",
+    title: "Open your next marketing channel",
+    task: "Open your next marketing channel for your brand and put your brand link in its bio.",
+    why: "Every new channel is a new door for players to find your brand.",
+    cta: "brand_link",
+    points: 25,
+    score: (m) => (m.ctx.boss.stats.totalPlayers < 50 ? 28 : 12),
+    cooldownDays: 7,
+  },
+  {
+    id: "plan_month",
+    title: "Set your plan for the month",
+    task: "Review your numbers from this week with me and set your goal for the next 3 weeks.",
+    why: "A brand with a target grows on purpose, not by luck.",
+    cta: "dashboard",
+    points: 20,
+    // Only given as the last day of a playbook (never by the daily picker).
+    score: () => 0,
   },
 ];
 

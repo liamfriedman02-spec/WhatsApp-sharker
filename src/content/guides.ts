@@ -7,7 +7,15 @@ import type { BossProfile } from "../platform/types.js";
 import { agentStage } from "../platform/types.js";
 import type { CtaId } from "./links.js";
 
-export type GuideId = "activate_agent" | "connect_socials" | "share_link" | "setup_payouts";
+export type GuideId =
+  | "activate_agent"
+  | "connect_socials"
+  | "share_link"
+  | "setup_payouts"
+  | "open_instagram"
+  | "open_tiktok"
+  | "open_telegram"
+  | "facebook_groups";
 
 export interface GuideStep {
   text: string;
@@ -26,6 +34,8 @@ export interface Guide {
   success: string;
   /** Guide to continue with after success. */
   next?: GuideId;
+  /** Finishing this guide opens this marketing channel (recorded for the Boss). */
+  channel?: "instagram" | "tiktok" | "telegram" | "facebook";
 }
 
 export const GUIDES: Record<GuideId, Guide> = {
@@ -78,6 +88,61 @@ export const GUIDES: Record<GuideId, Guide> = {
     verify: (b) => b.payouts.methodConfigured,
     alreadyDone: (b) => b.payouts.methodConfigured,
     success: "✅ Your payout method is set. Your earnings are ready to reach you.",
+  },
+
+  // ── Marketing channels ────────────────────────────────────────────────────
+  open_instagram: {
+    id: "open_instagram",
+    title: "Open Instagram for your brand",
+    intro: "Let's open Instagram for your brand. 10 minutes, and every profile visit can become a player. 📸",
+    steps: [
+      { text: "*Step 1* — In Instagram, create a new account (or use yours) named after your brand. Use your brand name as the display name." },
+      { text: "*Step 2* — Copy your brand link from Boss Hub → My Brand and paste it in your bio. Write one line: what your brand is and why people should join.", cta: "brand_link" },
+      { text: "*Step 3* — Post your first story: say you launched your brand and add the link sticker. Then follow 20 people you know so they see it." },
+    ],
+    alreadyDone: (b) => b.aiAgent.connectedSocials.includes("instagram"),
+    success: "📸 Instagram is open for your brand! Connect it to your AI Agent and it posts there for you, every day.",
+    next: "connect_socials",
+    channel: "instagram",
+  },
+  open_tiktok: {
+    id: "open_tiktok",
+    title: "Open TikTok for your brand",
+    intro: "TikTok reaches people who don't know you yet. Let's open it for your brand, 10 minutes. 🎵",
+    steps: [
+      { text: "*Step 1* — In TikTok, create an account named after your brand (or use yours and switch to a Business account in Settings)." },
+      { text: "*Step 2* — Add your brand link to your bio (Business accounts can add a link). Write one line about your brand.", cta: "brand_link" },
+      { text: "*Step 3* — Post a 10-second video: your face, 'I just launched my own brand, link in bio'. Real beats polished." },
+    ],
+    alreadyDone: (b) => b.aiAgent.connectedSocials.includes("tiktok"),
+    success: "🎵 TikTok is open for your brand! Connect it to your AI Agent so it keeps posting for you.",
+    next: "connect_socials",
+    channel: "tiktok",
+  },
+  open_telegram: {
+    id: "open_telegram",
+    title: "Open a Telegram channel",
+    intro: "Your own Telegram channel is where your players hear from you first. Let's open it, 5 minutes. ✈️",
+    steps: [
+      { text: "*Step 1* — In Telegram: New message → New Channel. Name it after your brand and make it public with a short link." },
+      { text: "*Step 2* — Put your brand link in the channel description and pin a welcome post with it.", cta: "brand_link" },
+      { text: "*Step 3* — Invite your players and share the channel link on your WhatsApp status." },
+    ],
+    success: "✈️ Your Telegram channel is live! Post there whenever there's news for your players.",
+    channel: "telegram",
+  },
+  facebook_groups: {
+    id: "facebook_groups",
+    title: "Use Facebook groups",
+    intro: "Facebook groups are full of people near you and people who share your interests. Let's use them the right way. 📘",
+    steps: [
+      { text: "*Step 1* — Join 3 groups where your brand fits: your city or neighborhood, a hobby you share, and one you're already active in." },
+      { text: "*Step 2* — Read each group's rules. Where posting a link is allowed, post a personal message about your brand with your link.", cta: "brand_link" },
+      { text: "*Step 3* — Where links aren't allowed, join the conversation first and invite people privately. Personal beats spam, always." },
+    ],
+    alreadyDone: (b) => b.aiAgent.connectedSocials.includes("facebook"),
+    success: "📘 You're in! Keep it personal in the groups and the players will come.",
+    channel: "facebook",
   },
 };
 
