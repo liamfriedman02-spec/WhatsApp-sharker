@@ -48,7 +48,7 @@ export function missionMessage(ctx: ContentCtx, mission: MissionDef, coach: Coac
 
 export function missionDoneMessage(result: Extract<MissionResult, { status: "done" }>, coach: CoachView): OutboundMessage {
   const next = coach.level.next
-    ? `\n\n${coach.level.next.emoji} Next level: *${coach.level.next.name}* — ${nextLevelNeeds(coach.level)}`
+    ? `\n\n${coach.level.next.emoji} Next level: *${coach.level.next.name}* (${nextLevelNeeds(coach.level)})`
     : "\n\n👑 You're at the top level. Stay there!";
   const goal = coach.goal?.goal.status === "active" ? `\n🎯 Goal: ${goalStatusLine(coach.goal)}` : "";
   return {
@@ -61,7 +61,7 @@ export function missionDoneMessage(result: Extract<MissionResult, { status: "don
 export function missionAlreadyDoneMessage(coach: CoachView): OutboundMessage {
   return {
     kind: "buttons",
-    body: `✅ Today's mission is done — nice work!\n\n${streakLine(coach)}\n\nHungry for more?`,
+    body: `✅ Today's mission is done. Nice work!\n\n${streakLine(coach)}\n\nHungry for more?`,
     buttons: [{ id: "mission:bonus", title: "🎯 Bonus mission" }, PROGRESS, MENU],
   };
 }
@@ -96,7 +96,7 @@ export function progressMessage(ctx: ContentCtx, coach: CoachView): OutboundMess
       lv.nextRequirements.map((r) => `${r.current >= r.target ? "✅" : "⬜"} ${r.label}${r.target > 1 ? ` (${num(r.current)}/${num(r.target)})` : ""}`).join("\n")
     : "\n👑 You're at the top level!";
   const hasGoal = coach.goal && (coach.goal.goal.status === "active" || coach.goal.status === "achieved");
-  const goal = hasGoal ? goalBlock(coach.goal!, ctx) : "🎯 *Your goal:* not set yet — a clear target makes you grow faster.";
+  const goal = hasGoal ? goalBlock(coach.goal!, ctx) : "🎯 *Your goal:* not set yet. A clear target makes you grow faster.";
   const tip = coach.insights.tips[0] ? `\n\n${coach.insights.tips[0].text}` : "";
   return {
     kind: "buttons",
@@ -116,7 +116,7 @@ export function goalProposalMessage(ctx: ContentCtx, p: GoalProposal, coach: Coa
   const daily = p.metric === "players" ? `about ${perDay(p.target / p.days)} new players a day` : `about ${formatAmount("earnings", p.target / p.days, ctx.boss.stats.currency)} a day`;
   return {
     kind: "buttons",
-    body: `${intro ?? "🎯 *Let's set your goal*"}\n\n${basis}\n*${formatAmount(p.metric, p.target, ctx.boss.stats.currency)} by ${deadline}*\n\nThat's ${daily}. Doable — if you push every day. 💪`,
+    body: `${intro ?? "🎯 *Let's set your goal*"}\n\n${basis}\n*${formatAmount(p.metric, p.target, ctx.boss.stats.currency)} by ${deadline}*\n\nThat's ${daily}. Doable, if you push every day. 💪`,
     buttons: [
       { id: "goal:accept", title: "✅ Let's do it" },
       { id: "goal:higher", title: "📈 Aim higher" },

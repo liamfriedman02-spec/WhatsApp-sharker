@@ -86,7 +86,7 @@ describe("demo mode conversations", () => {
 
     const [pick] = await h.tg({ text: "demo" });
     expect(ids(pick?.message)).toEqual(["demo:ana", "demo:bruno", "demo:carla", "demo:diego"]);
-    expect(textOf(pick?.message)).toContain("You're testing as: *💎 Carla — growing*");
+    expect(textOf(pick?.message)).toContain("You're testing as: *💎 Carla · growing*");
 
     const [switched, menu] = await h.tg({ type: "reply", replyId: "demo:diego" });
     expect(textOf(switched?.message)).toContain("now testing as *Diego*");

@@ -36,17 +36,17 @@ export function homeMessage(ctx: ContentCtx): OutboundMessage {
   const state = coach?.state;
   const active = state?.playbook?.status === "active" ? getPlaybook(state.playbook.id) : undefined;
   const proposed = coach && state && !active ? proposePlaybook(ctx, state) : null;
-  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
+  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row. Keep it going!` : "";
 
   let lead: string;
   let primary: Button;
   if (active && state?.playbook) {
     const step = active.steps[state.playbook.step];
     const done = coach?.todayMission?.record.status === "done";
-    lead = `${active.emoji} ${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}\n👉 ${done ? "Today's step is done ✅ Tomorrow I bring the next one." : `*${step?.title ?? "Today's step"}* — 10 minutes, everything's prepared.`}`;
+    lead = `${active.emoji} ${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}\n👉 ${done ? "Today's step is done ✅ Tomorrow I bring the next one." : `*${step?.title ?? "Today's step"}*. 10 minutes, everything's prepared.`}`;
     primary = { id: "play:today", title: done ? "⏭️ Next day now" : "▶️ Today's step" };
   } else if (proposed) {
-    lead = `${proposed.emoji} *${proposed.title}* — ${proposed.steps.length} days, 10 minutes a day.\n👉 Day 1: *${proposed.steps[0]?.title ?? ""}*. I prepare everything, you press send.`;
+    lead = `${proposed.emoji} *${proposed.title}*. ${proposed.steps.length} days, 10 minutes a day.\n👉 Day 1: *${proposed.steps[0]?.title ?? ""}*. I prepare everything, you press send.`;
     primary = { id: `play:start:${proposed.id}`, title: "🚀 Start day 1" };
   } else {
     const done = coach?.todayMission?.record.status === "done";
@@ -70,15 +70,15 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
     ctx.stage === "live"
       ? "Live ✅ See what it's doing for you"
       : ctx.stage === "needs_socials"
-        ? "Almost there — connect your socials"
-        : "Not active yet — let AI market for you";
+        ? "Almost there. Connect your socials"
+        : "Not active yet. Let AI market for you";
   const missionRow =
     coach?.todayMission?.record.status === "done" ? "Done today ✅ Want a bonus one?" : truncate(capitalizeFirst(nba.text), 72);
   const goalRow =
     coach?.state.goal?.status === "active" && coach.goal
       ? truncate(`${coach.goal.label} · level ${coach.level.current?.name ?? "Starter"}`, 72)
       : `Level ${coach?.level.current?.name ?? "Starter"} · set your goal`;
-  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row — keep it going!` : "";
+  const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row. Keep it going!` : "";
 
   // The plan row: today's step of the active plan, or the plan the coach would start now.
   const state = coach?.state;
@@ -94,7 +94,7 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
   return {
     kind: "list",
     header: "Everything I can do",
-    body: `For *${boss.brandName}*:${planLead}\n👉 First: ${nba.text}.\n\nPick what you need — or just type.${streak}`,
+    body: `For *${boss.brandName}*:${planLead}\n👉 First: ${nba.text}.\n\nPick what you need. Or just type.${streak}`,
     footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "You can also just type to me",
     buttonLabel: "Open menu",
     sections: [
@@ -130,7 +130,7 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
 export function learnMenu(): OutboundMessage {
   return {
     kind: "list",
-    body: "🎓 *Learn your business*\n\nPick a topic — each one takes less than a minute.",
+    body: "🎓 *Learn your business*\n\nPick a topic. Each one takes less than a minute.",
     footer: "Start with “What is a Boss?”",
     buttonLabel: "See topics",
     sections: [{ title: "Topics", rows: TOPICS.map((t) => ({ id: `learn:${t.id}`, title: t.title, description: t.description })) }],
@@ -162,7 +162,7 @@ export function topicMessages(topic: Topic, ctx: ContentCtx): OutboundMessage[] 
 export function helpMenu(): OutboundMessage {
   return {
     kind: "list",
-    body: "💬 *How can I help?*\n\nPick a topic — or just type your question in your own words.",
+    body: "💬 *How can I help?*\n\nPick a topic. Or just type your question in your own words.",
     buttonLabel: "Choose a topic",
     sections: [
       {
@@ -225,10 +225,10 @@ export function businessSnapshot(ctx: ContentCtx): OutboundMessage {
         ? `${plural(boss.aiAgent.postsPublished7d, "post", "posts")} this week ✅`
         : "live ✅"
       : ctx.stage === "needs_socials"
-        ? "active — connect your socials"
+        ? "active. Connect your socials"
         : "not active yet";
   const lines = [
-    `📊 *${boss.brandName} — your business*`,
+    `📊 *${boss.brandName}: your business*`,
     "",
     `👥 *Your players:* ${num(s.totalPlayers)} (+${num(s.newPlayersToday)} today, +${num(s.newPlayers7d)} this week)`,
     ...(trends ? [`   ↳ new players ${formatChange(trends.newPlayers)}`] : []),
@@ -354,14 +354,14 @@ export function telegramLinkRequest(name: string | undefined, retry = false): Ou
     kind: "contact_request",
     body: retry
       ? "Please use the button below to share *your own* phone number (the one in your Boss Hub profile)."
-      : `👋 Hi${name ? ` ${name}` : ""}! I'm the *Sharker Boss Coach*.\n\nTo connect you to your Boss account, tap the button below to share your phone number — the one in your Boss Hub profile.`,
+      : `👋 Hi${name ? ` ${name}` : ""}! I'm the *Sharker Boss Coach*.\n\nTo connect you to your Boss account, tap the button below to share your phone number (the one in your Boss Hub profile).`,
     buttonLabel: "📱 Share my phone number",
   };
 }
 
 export function telegramLinkedMessage(boss: { firstName: string; brandName: string }, demo = false): OutboundMessage {
   const hint = demo ? `\n\n🧪 Demo mode: you're testing as *${boss.firstName}*. Type *demo* anytime to switch Boss profile.` : "";
-  return { kind: "text", text: `✅ Connected! Welcome, ${boss.firstName} — I'm your coach for *${boss.brandName}*.${hint}` };
+  return { kind: "text", text: `✅ Connected! Welcome, ${boss.firstName}. I'm your coach for *${boss.brandName}*.${hint}` };
 }
 
 export function demoMenu(current?: string): OutboundMessage {

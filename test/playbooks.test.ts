@@ -63,7 +63,7 @@ describe("launch sprint", () => {
     expect(tpl?.kind === "template" && tpl.bodyParams).toEqual([
       "7-day launch sprint",
       "2 of 7",
-      "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts — forward, post, done.",
+      "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts. Forward, post, done.",
       "Send your brand link to 3 WhatsApp groups where people know you.",
     ]);
     expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ step: 1, stepDate: "2026-09-29" });

@@ -99,7 +99,7 @@ export const NUDGES = {
     category: "UTILITY",
     body:
       "🎉 *Your first player is here!*\n\n" +
-      "Someone just joined *{{1}}* — your brand, your player.\n\n" +
+      "Someone just joined *{{1}}*. Your brand, your player.\n\n" +
       "Two things now: send them a welcome (I have the text ready), then share your link again today and bring the next one.",
     params: (c) => [brand(c)],
     example: ["Ana Arena"],
@@ -150,7 +150,7 @@ export const NUDGES = {
     category: "MARKETING",
     body:
       "⏱️ *Your marketing, on autopilot*\n\n" +
-      "Hi {{1}}! Posting every day takes time. Your AI Marketing Agent can do it for *{{2}}* — it creates and publishes content automatically.\n\n" +
+      "Hi {{1}}! Posting every day takes time. Your AI Marketing Agent can do it for *{{2}}*. It creates and publishes content automatically.\n\n" +
       "It's one tap away.",
     params: (c) => [first(c), brand(c)],
     example: ["Ana", "Ana Arena"],
@@ -164,7 +164,7 @@ export const NUDGES = {
     body:
       "🤖 *Still marketing by hand, {{1}}?*\n\n" +
       "Your AI Agent is ready to promote *{{2}}* for you, every day.\n\n" +
-      "This is my last reminder about it — you can activate it anytime from your Boss Hub.",
+      "This is my last reminder about it. You can activate it anytime from your Boss Hub.",
     params: (c) => [first(c), brand(c)],
     example: ["Ana", "Ana Arena"],
     cta: "agent_activate",
@@ -201,7 +201,7 @@ export const NUDGES = {
     body:
       "🤖 *Last step to autopilot, {{1}}*\n\n" +
       "Connect one social account and your Agent starts working for *{{2}}*.\n\n" +
-      "This is my last reminder — you can do it anytime in your Boss Hub.",
+      "This is my last reminder. You can do it anytime in your Boss Hub.",
     params: (c) => [first(c), brand(c)],
     example: ["Ana", "Ana Arena"],
     cta: "agent_socials",
@@ -474,7 +474,7 @@ export const NUDGES = {
     category: "UTILITY",
     body:
       "🔥 *Best day ever for {{1}}!*\n\n" +
-      "{{2}} new players joined today — your best day so far. Your marketing is working.\n\n" +
+      "{{2}} new players joined today. Your best day so far. Your marketing is working.\n\n" +
       "Strike while it's hot: share your link once more tonight.",
     params: (c) => [brand(c), num(c.boss.stats.newPlayersToday)],
     example: ["Carla Kingdom", "12"],

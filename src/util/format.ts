@@ -39,6 +39,20 @@ export function joinList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
+/**
+ * Makes model-written text read like a person typing: dashes used as punctuation ("—", "–",
+ * " -- ") become commas, which is how people actually text.
+ */
+export function humanize(text: string): string {
+  return text
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\s+--\s+/g, ", ")
+    .replace(/([,.!?:;])\s*,\s/g, "$1 ")
+    .replace(/\n, /g, "\n")
+    .replace(/^, /, "")
+    .trim();
+}
+
 export function shortDate(iso: string, timeZone = "UTC"): string {
   try {
     return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone }).format(

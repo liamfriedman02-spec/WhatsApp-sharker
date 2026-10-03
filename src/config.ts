@@ -60,7 +60,7 @@ const EnvSchema = z.object({
 
   // Human support
   SUPPORT_WEBHOOK_URL: optionalString,
-  SUPPORT_HOURS: z.string().default("Mon–Fri, 9:00–18:00"),
+  SUPPORT_HOURS: z.string().default("Mon-Fri, 9:00-18:00"),
   HANDOFF_TIMEOUT_HOURS: z.coerce.number().positive().default(24),
 
   // Admin API

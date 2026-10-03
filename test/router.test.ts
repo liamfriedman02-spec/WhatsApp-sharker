@@ -123,7 +123,7 @@ describe("support", () => {
     const h = harness();
     const [m] = await h.tap(PHONES.carla, "menu:business");
     const t = textOf(m);
-    expect(t).toContain("Carla Kingdom — your business");
+    expect(t).toContain("Carla Kingdom: your business");
     expect(t).toContain("*Your players:* 248 (+4 today, +31 this week)");
     expect(t).toContain("*Your earnings:*");
     expect(t).toContain("*Your AI Agent:* 14 posts this week");

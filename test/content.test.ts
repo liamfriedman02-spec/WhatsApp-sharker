@@ -123,6 +123,14 @@ describe("content fits WhatsApp limits", () => {
     expect(problems).toEqual([]);
   });
 
+  it("reads like a person: no dashes used as punctuation anywhere the Boss can see", () => {
+    const texts = allViews().map((m) => JSON.stringify(m));
+    texts.push(...templates.map((t) => `${t.body} ${t.footer ?? ""} ${t.example.join(" ")}`));
+    const offenders = texts.filter((t) => /[—–]|\s--\s/.test(t));
+    expect(offenders).toEqual([]);
+    expect(SYSTEM_PROMPT).toContain('never "—"');
+  });
+
   it("every button / row id is routable", () => {
     const unroutable = allViews()
       .flatMap((m) => (m.kind === "buttons" ? m.buttons.map((b) => b.id) : m.kind === "list" ? m.sections.flatMap((s) => s.rows.map((r) => r.id)) : []))

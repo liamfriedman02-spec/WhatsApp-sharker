@@ -83,12 +83,12 @@ export const PLAYBOOKS: Playbook[] = [
         mission: () => "invite_friends",
         ask: "audience",
         brief: (c) =>
-          `Day 1. Your first players come from people who know you — not from strangers. Tell me who's around you and I'll write each invite in your voice. Then you send it to 5 people today.`,
+          `Day 1. Your first players come from people who know you. Not from strangers. Tell me who's around you and I'll write each invite in your voice. Then you send it to 5 people today.`,
       },
       {
         title: "Groups and status",
         mission: () => "share_groups",
-        brief: () => "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts — forward, post, done.",
+        brief: () => "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts. Forward, post, done.",
         texts: (c) => [getAudience("community")!.invite(c), fallbackPosts(c)[0]!],
       },
       {
@@ -96,7 +96,7 @@ export const PLAYBOOKS: Playbook[] = [
         mission: (c) => agentMission(c),
         brief: (c) =>
           c.stage === "live"
-            ? "Day 3. Your AI Agent is already posting for you — today you multiply its reach."
+            ? "Day 3. Your AI Agent is already posting for you. Today you multiply its reach."
             : "Day 3. You've been doing the personal part. Now put the public part on autopilot: your AI Marketing Agent posts for your brand every day, even while you sleep.",
         button: (c) => agentButton(c),
       },
@@ -126,7 +126,7 @@ export const PLAYBOOKS: Playbook[] = [
         mission: (c) => (c.boss.stats.totalPlayers >= 1 ? "ask_referral" : "invite_friends"),
         brief: (c) =>
           c.boss.stats.totalPlayers >= 1
-            ? "Day 6. Your players know people like them. Today you ask 3 of them to bring one friend each — the cheapest new players you'll ever get."
+            ? "Day 6. Your players know people like them. Today you ask 3 of them to bring one friend each. The cheapest new players you'll ever get."
             : "Day 6. Five more personal invites today. Pick people you haven't written to yet.",
         texts: (c, s) => (c.boss.stats.totalPlayers >= 1 ? [referralText(c)] : invitesFor(c, s, ["friends"])),
       },
@@ -165,7 +165,7 @@ export const PLAYBOOKS: Playbook[] = [
     emoji: "🔁",
     title: "Comeback week",
     description: "Bring your inactive players back. 3 days.",
-    intro: (c) => `You already brought these players to *${brand(c)}*. For 3 days we bring them back — that's the fastest earnings you can add.`,
+    intro: (c) => `You already brought these players to *${brand(c)}*. For 3 days we bring them back. That's the fastest earnings you can add.`,
     eligible: (c) => c.boss.stats.totalPlayers - c.boss.stats.activePlayers7d >= 5,
     score: (c) => (c.boss.stats.totalPlayers - c.boss.stats.activePlayers7d >= 5 ? 70 : 0),
     success: (c) => `🔁 *Comeback week done!* Players who came back to *${brand(c)}* are earnings you didn't have last week.`,
@@ -204,7 +204,7 @@ export const PLAYBOOKS: Playbook[] = [
       {
         title: "Connect it",
         mission: (c) => (c.stage === "live" ? "share_agent_post" : agentMission(c)),
-        brief: (c) => (c.stage === "live" ? "Day 3. Your AI Agent posts for you — share its best post on the new channel too." : "Day 3. Connect the new channel to your AI Agent so it keeps posting there without you."),
+        brief: (c) => (c.stage === "live" ? "Day 3. Your AI Agent posts for you. Share its best post on the new channel too." : "Day 3. Connect the new channel to your AI Agent so it keeps posting there without you."),
         button: (c) => agentButton(c),
       },
     ],

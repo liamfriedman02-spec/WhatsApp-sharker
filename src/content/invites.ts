@@ -27,7 +27,7 @@ export const AUDIENCES: Audience[] = [
   {
     id: "family",
     title: "👨‍👩‍👧 Family",
-    description: "Parents, siblings, cousins — people who root for you",
+    description: "Parents, siblings, cousins. People who root for you",
     keywords: ["family", "parents", "mom", "dad", "brother", "sister", "cousin", "cousins", "uncle", "aunt", "relatives", "familia", "família"],
     invite: (c) =>
       `Hey! 👋 Big news: I just launched my own brand, *${c.boss.brandName}*. It's something I'm building myself and I'd love to have you in it from day one. Join here, it takes a minute: ${LINK}\nTell me when you're in! 🙏`,

@@ -95,7 +95,7 @@ export const FAQ: FaqEntry[] = [
     category: "brand",
     title: "Find my brand link",
     question: "Where do I find my brand link?",
-    answer: "Your brand link is in your Boss Hub → *My Brand*. Copy it and share it everywhere — every player who joins through it is *your* player.",
+    answer: "Your brand link is in your Boss Hub → *My Brand*. Copy it and share it everywhere. Every player who joins through it is *your* player.",
     cta: () => "brand_link",
     guide: "share_link",
     keywords: ["my link", "brand link", "where is my link", "find link", "referral", "invite link"],
@@ -157,7 +157,7 @@ export const FAQ: FaqEntry[] = [
       "1. Open Boss Hub → *Payouts* and check the payout status\n" +
       "2. Make sure your payout details are correct\n" +
       "3. Allow for the processing time shown there\n\n" +
-      "Still missing? Tap *Talk to a human* — our team will check it for you.",
+      "Still missing? Tap *Talk to a human*. Our team will check it for you.",
     cta: () => "payouts",
     suggestHuman: true,
     keywords: ["didn't receive", "not received", "missing payout", "where is my money", "late payout", "payment missing"],
@@ -180,7 +180,7 @@ export const FAQ: FaqEntry[] = [
     title: "A player has a problem",
     question: "One of my players has a problem with their account",
     answer:
-      "Player accounts are handled by Sharker support. Ask your player to contact support from your brand's site — or tap *Talk to a human* and tell us what happened.",
+      "Player accounts are handled by Sharker support. Ask your player to contact support from your brand's site. Or tap *Talk to a human* and tell us what happened.",
     suggestHuman: true,
     keywords: ["player problem", "player issue", "player can't", "player complaint", "player account", "player support"],
   },
@@ -225,7 +225,7 @@ export const FAQ: FaqEntry[] = [
       "Ideas that work:\n" +
       "• A short story about why you started your brand\n" +
       "• News and highlights from your brand\n" +
-      "• A clear call: \"Join me — link in bio\"\n\n" +
+      "• A clear call: \"Join me. Link in bio\"\n\n" +
       "Or let your AI Agent create and publish posts for you.",
     cta: (ctx) => (ctx.stage === "live" ? "marketing" : agentCta(ctx.stage)),
     keywords: ["what to post", "post ideas", "content ideas", "what should i post", "caption"],

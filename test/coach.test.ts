@@ -141,7 +141,7 @@ describe("coaching conversation", () => {
     expect((await coachState(h, "boss_carla")).streak).toBe(3);
     await h.tap(PHONES.carla, "mission:today");
     const [other] = await h.tap(PHONES.carla, "mission:skip");
-    expect(textOf(other)).toContain("try this one instead");
+    expect(textOf(other)).toContain("Try this one instead");
     expect((await coachState(h, "boss_carla")).streak).toBe(0);
   });
 

@@ -16,10 +16,10 @@ export interface DemoPersona {
 }
 
 export const DEMO_PERSONAS: DemoPersona[] = [
-  { id: "ana", title: "🌱 Ana — new Boss", description: "Just launched · no players yet · AI Agent off" },
-  { id: "bruno", title: "🤖 Bruno — Agent ready", description: "First players · Agent on, socials not connected" },
-  { id: "carla", title: "💎 Carla — growing", description: "248 players · Agent live · earning every day" },
-  { id: "diego", title: "📉 Diego — slowing", description: "Away 12 days · new players dropping" },
+  { id: "ana", title: "🌱 Ana · new Boss", description: "Just launched · no players yet · AI Agent off" },
+  { id: "bruno", title: "🤖 Bruno · Agent ready", description: "First players · Agent on, socials not connected" },
+  { id: "carla", title: "💎 Carla · growing", description: "248 players · Agent live · earning every day" },
+  { id: "diego", title: "📉 Diego · slowing", description: "Away 12 days · new players dropping" },
 ];
 
 export function personaId(value: string): DemoPersona["id"] | null {

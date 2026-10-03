@@ -18,7 +18,7 @@ import { getTopic } from "../content/topics.js";
 import type { Logger } from "../logger.js";
 import type { BossProfile, SharkerPlatform } from "../platform/types.js";
 import type { BossState, Handoff, Store } from "../store/store.js";
-import { shortDate } from "../util/format.js";
+import { humanize, shortDate } from "../util/format.js";
 import { HOUR } from "../util/time.js";
 import { renderMessage } from "../whatsapp/consoleMessenger.js";
 import { LIMITS, type Button, type InboundMessage, type Messenger, type OutboundMessage } from "../whatsapp/types.js";
@@ -340,7 +340,7 @@ export class BotRouter {
         if (arg === "start") return this.askForHandoff(t);
         if (arg === "cancel") {
           t.state.mode = "bot";
-          return this.push(t, { kind: "buttons", body: "No problem — I'm here if you need me.", buttons: [BTN.menu, BTN.help] });
+          return this.push(t, { kind: "buttons", body: "No problem. I'm here if you need me.", buttons: [BTN.menu, BTN.help] });
         }
         if (arg === "close") return this.closeHandoffByBoss(t);
         return this.push(t, homeMessage(t.ctx));
@@ -387,7 +387,7 @@ export class BotRouter {
     }
     return this.push(t, {
       kind: "buttons",
-      body: "Sorry about that. Tell me more in your own words and I'll try again — or talk to a person from our team.",
+      body: "Sorry about that. Tell me more in your own words and I'll try again. Or talk to a person from our team.",
       buttons: [BTN.human, BTN.menu],
     });
   }
@@ -398,7 +398,7 @@ export class BotRouter {
       const text: Record<CoachIntensity, string> = {
         intense: "🔥 *Push mode on!* Daily missions, check-ins and goals. Let's grow *" + t.boss.brandName + "* fast.",
         standard: "💪 *Standard coaching.* Missions twice a week plus your weekly coaching session.",
-        light: "🌿 *Light touch.* Just your weekly coaching session — I'm here whenever you need me.",
+        light: "🌿 *Light touch.* Just your weekly coaching session. I'm here whenever you need me.",
       };
       return this.push(t, { kind: "buttons", body: text[value], buttons: [{ id: "mission:today", title: "🎯 Today's mission" }, BTN.menu] });
     }
@@ -423,7 +423,7 @@ export class BotRouter {
       return this.push(t, {
         kind: "buttons",
         body:
-          "⏸️ Done — I've paused tips and reminders.\n\nI'm still here whenever you need help: just type *MENU*. Reply *START* to turn tips back on.",
+          "⏸️ Done. I've paused tips and reminders.\n\nI'm still here whenever you need help: just type *MENU*. Reply *START* to turn tips back on.",
         buttons: [BTN.menu],
       });
     }
@@ -517,7 +517,7 @@ export class BotRouter {
   private guideStuck(t: Turn): void {
     return this.push(t, {
       kind: "buttons",
-      body: "No problem — tell me what's happening in your own words and I'll help you. Or talk to a person from our team.",
+      body: "No problem. Tell me what's happening in your own words and I'll help you. Or talk to a person from our team.",
       buttons: [BTN.human, { id: "guide_step:exit", title: "✖️ Exit guide" }],
     });
   }
@@ -546,7 +546,7 @@ export class BotRouter {
     t.ctx.coach = t.coach;
     const p = demo.personaOf(boss)!;
     this.deps.logger.info("demo profile switched", { bossId: boss.id });
-    this.push(t, { kind: "text", text: `🧪 You're now testing as *${boss.firstName}* — *${boss.brandName}*.\n${p.description}` });
+    this.push(t, { kind: "text", text: `🧪 You're now testing as *${boss.firstName}* (*${boss.brandName}*).\n${p.description}` });
     this.push(t, homeMessage(t.ctx));
   }
 
@@ -569,7 +569,7 @@ export class BotRouter {
         const opened = pb ? await coach.startPlaybook(t.ctx, t.coach, pb.id) : null;
         if (!pb || !opened) return this.push(t, playbookMenu(t.ctx, t.coach.state));
         this.deps.logger.info("playbook started", { bossId: t.boss.id, playbook: pb.id });
-        this.push(t, { kind: "text", text: `${pb.emoji} *${pb.title}* starts now. ${pb.steps.length} days — I lead, you send. Let's go.` });
+        this.push(t, { kind: "text", text: `${pb.emoji} *${pb.title}* starts now. ${pb.steps.length} days. I lead, you send. Let's go.` });
         if (opened.step.ask === "audience") t.state.flow = { type: "ask", ask: "audience" };
         return this.pushAll(t, stepMessages(t.ctx, opened, t.coach));
       }
@@ -618,7 +618,8 @@ export class BotRouter {
   private async aiInvite(t: Turn, audience: string): Promise<string | null> {
     const { assistant, config } = this.deps;
     if (!assistant?.writeInvite || !config.ai.enabled || !this.allowAi(t.boss.id)) return null;
-    return assistant.writeInvite({ ctx: t.ctx, audience });
+    const text = await assistant.writeInvite({ ctx: t.ctx, audience });
+    return text ? humanize(text) : null;
   }
 
   /** The Boss answered a question the bot asked in free text. */
@@ -637,7 +638,7 @@ export class BotRouter {
       const ai = await this.aiInvite(t, text);
       if (ai) return this.pushAll(t, inviteMessages(t.ctx, [{ title: who, text: ai }]));
       const friends = getAudience("friends")!;
-      this.push(t, { kind: "text", text: `Got it — ${who}. Here's an invite that works for people who know you. Change a word if you like, then send it to 5 of them.` });
+      this.push(t, { kind: "text", text: `Got it: ${who}. Here's an invite that works for people who know you. Change a word if you like, then send it to 5 of them.` });
       return this.pushAll(t, inviteMessages(t.ctx, [inviteFor(t.ctx, friends)]));
     }
     if (ask === "money") {
@@ -696,7 +697,7 @@ export class BotRouter {
         const m = t.coach.todayMission;
         if (m && m.record.status === "open") await coach.skipMission(t.boss.id, t.coach, m);
         const next = await coach.bonusMission(t.ctx, t.coach);
-        return this.push(t, missionMessage(t.ctx, next.def, t.coach, "🔄 *No problem — try this one instead*"));
+        return this.push(t, missionMessage(t.ctx, next.def, t.coach, "🔄 *No problem. Try this one instead*"));
       }
       case "bonus": {
         const next = await coach.bonusMission(t.ctx, t.coach);
@@ -710,7 +711,7 @@ export class BotRouter {
         }
         return this.push(t, {
           kind: "buttons",
-          body: `🙋 *How to do it*\n\n${m.def.task}\n\n💡 ${m.def.why}\n\nStart small — one message, one group, one post. You've got this! 💪`,
+          body: `🙋 *How to do it*\n\n${m.def.task}\n\n💡 ${m.def.why}\n\nStart small. One message, one group, one post. You've got this! 💪`,
           buttons: [{ id: "mission:done", title: "✅ Done" }, { id: "mission:skip", title: "🔄 Another one" }, BTN.human],
         });
       }
@@ -759,7 +760,7 @@ export class BotRouter {
   private async writePosts(t: Turn, request?: string): Promise<void> {
     const { assistant, config } = this.deps;
     let posts: string[] | null = null;
-    if (assistant && config.ai.enabled && this.allowAi(t.boss.id)) posts = await assistant.writePosts({ ctx: t.ctx, request });
+    if (assistant && config.ai.enabled && this.allowAi(t.boss.id)) posts = (await assistant.writePosts({ ctx: t.ctx, request }))?.map(humanize) ?? null;
     return this.pushAll(t, postsMessages(t.ctx, posts ?? fallbackPosts(t.ctx)));
   }
 
@@ -773,7 +774,7 @@ export class BotRouter {
     }
     return this.push(t, {
       kind: "buttons",
-      body: "No stress. What's getting in the way? Tell me in a few words and we'll make it easier — or let me write the post for you.",
+      body: "No stress. What's getting in the way? Tell me in a few words and we'll make it easier. Or let me write the post for you.",
       buttons: [{ id: "post:write", title: "✍️ Write me a post" }, { id: "mission:today", title: "🎯 Today's mission" }, BTN.menu],
     });
   }
@@ -831,7 +832,7 @@ export class BotRouter {
     }
     return this.push(t, {
       kind: "buttons",
-      body: "🤔 I didn't catch that. Here's what I can do right now — or ask me in a different way.",
+      body: "🤔 I didn't catch that. Here's what I can do right now. Or ask me in a different way.",
       buttons: [this.coachButton(t), BTN.help, BTN.human],
     });
   }
@@ -897,7 +898,7 @@ export class BotRouter {
     if (t.state.mode === "human" && t.state.handoffId) {
       return this.push(t, {
         kind: "buttons",
-        body: `🙋 Your request #${t.state.handoffId} is already with our support team. Just write here — they'll see it.`,
+        body: `🙋 Your request #${t.state.handoffId} is already with our support team. Just write here. They'll see it.`,
         buttons: [{ id: "handoff:close", title: "✖️ Close request" }, BTN.menu],
       });
     }

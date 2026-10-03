@@ -35,7 +35,7 @@ export function playbookMenu(ctx: ContentCtx, state: CoachState): OutboundMessag
   if (!active && available.length === 0) {
     return {
       kind: "buttons",
-      body: `📣 *Campaigns*\n\nNo campaign fits *${ctx.boss.brandName}* right now — today's mission is the move. Campaigns unlock as your players grow.`,
+      body: `📣 *Campaigns*\n\nNo campaign fits *${ctx.boss.brandName}* right now. Today's mission is the move. Campaigns unlock as your players grow.`,
       buttons: [MISSION, { id: "texts:menu", title: "💌 Texts for me" }, MENU],
     };
   }
@@ -48,7 +48,7 @@ export function playbookMenu(ctx: ContentCtx, state: CoachState): OutboundMessag
   return {
     kind: "list",
     body: active
-      ? `📣 *Campaigns*\n\nYou're in the middle of *${active.title}*. Finish it first — or switch, your call.`
+      ? `📣 *Campaigns*\n\nYou're in the middle of *${active.title}*. Finish it first. Or switch, your call.`
       : `📣 *Campaigns*\n\nA campaign is a few days with one clear push, everything prepared by me. The first one is the one I'd run for *${ctx.boss.brandName}* now.`,
     buttonLabel: "See campaigns",
     sections: [{ title: "Plans", rows }],
@@ -104,7 +104,7 @@ export function playbookDoneMessage(ctx: ContentCtx, pb: Playbook, coach: CoachV
 export function playbookStoppedMessage(): OutboundMessage {
   return {
     kind: "buttons",
-    body: "Plan paused. No problem — one mission a day keeps you moving, and you can start a campaign anytime.",
+    body: "Plan paused. No problem. One mission a day keeps you moving, and you can start a campaign anytime.",
     buttons: [MISSION, { id: "play:menu", title: "📣 Campaigns" }, MENU],
   };
 }
@@ -114,7 +114,7 @@ export function playbookStoppedMessage(): OutboundMessage {
 export function audienceQuestion(): OutboundMessage {
   return {
     kind: "list",
-    body: "👥 *Who's around you?*\n\nPick a group and I write the invite in your voice. Pick as many as you like — or just type who you know (\"my football group, a few cousins\").",
+    body: "👥 *Who's around you?*\n\nPick a group and I write the invite in your voice. Pick as many as you like. Or just type who you know (\"my football group, a few cousins\").",
     footer: "Or type who you know",
     buttonLabel: "Pick a group",
     sections: [{ title: "Your people", rows: AUDIENCES.map((a) => ({ id: `invite:${a.id}`, title: a.title, description: a.description })) }],
@@ -133,8 +133,8 @@ export const inviteFor = (ctx: ContentCtx, a: Audience): Invite => ({ title: a.t
 export function inviteMessages(ctx: ContentCtx, invites: Invite[]): OutboundMessage[] {
   const intro =
     invites.length === 1
-      ? `💌 *Your invite for ${invites[0]!.title.replace(/^[^\p{L}\p{N}]+/u, "").toLowerCase()}*\n\nForward it to 5 people today. One by one — personal, not broadcast.`
-      : `💌 *Your invites* — one per group. Forward each to 5 people today, one by one.`;
+      ? `💌 *Your invite for ${invites[0]!.title.replace(/^[^\p{L}\p{N}]+/u, "").toLowerCase()}*\n\nForward it to 5 people today. One by one. Personal, not broadcast.`
+      : `💌 *Your invites*. One per group. Forward each to 5 people today, one by one.`;
   const out: OutboundMessage[] = [{ kind: "text", text: intro }];
   for (const i of invites) out.push({ kind: "text", text: withLink(i.text, ctx) });
   out.push({
@@ -170,7 +170,7 @@ export function textsMenu(ctx: ContentCtx): OutboundMessage {
 const PLAYER_TEXTS: Record<string, { title: string; text: (ctx: ContentCtx) => string; tip: string }> = {
   welcome: { title: "👋 *Welcome text for a new player*", text: welcomeText, tip: "Send it the day they join. A welcomed player plays." },
   referral: { title: "🤝 *Ask a player to bring a friend*", text: referralText, tip: "Send it to your 3 most active players, one by one." },
-  followup: { title: "🔁 *Friendly follow-up*", text: followUpText, tip: "For anyone who got your invite 2–3 days ago and didn't answer." },
+  followup: { title: "🔁 *Friendly follow-up*", text: followUpText, tip: "For anyone who got your invite 2 or 3 days ago and didn't answer." },
   comeback: { title: "👀 *Comeback message*", text: comebackText, tip: "For players who didn't play this week. Short and warm." },
 };
 
@@ -211,7 +211,7 @@ export function moneyMenu(ctx: ContentCtx): OutboundMessage {
   const cur = ctx.boss.stats.currency;
   return {
     kind: "buttons",
-    body: `💰 *How much do you want ${ctx.boss.brandName} to earn a month?*\n\nPick one, or type any amount (like 500). I turn it into a number of players and a plan — from your own numbers, no promises.`,
+    body: `💰 *How much do you want ${ctx.boss.brandName} to earn a month?*\n\nPick one, or type any amount (like 500). I turn it into a number of players and a plan. From your own numbers, no promises.`,
     buttons: MONEY_PRESETS.map((n) => ({ id: `money:${n}`, title: money(n, cur, { whole: true }) })),
   };
 }
@@ -227,7 +227,7 @@ export function moneyAnswerMessage(ctx: ContentCtx, m: MoneyMath, state: CoachSt
 }
 
 export function moneyAskMessage(): OutboundMessage {
-  return { kind: "text", text: "Type the amount you want to earn a month — just the number, like *300*." };
+  return { kind: "text", text: "Type the amount you want to earn a month. Just the number, like *300*." };
 }
 
 /** Short line for the main menu: where the Boss is in their plan. */

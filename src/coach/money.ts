@@ -67,7 +67,7 @@ export function moneyExplanation(ctx: ContentCtx, m: MoneyMath): string {
   if (m.kind === "no_data") {
     return (
       `💰 *${target} a month from ${ctx.boss.brandName}*\n\n` +
-      `I can't put a number on it yet: I need your first 3 active players to see what each one brings you. That's the point of your first week — ` +
+      `I can't put a number on it yet: I need your first 3 active players to see what each one brings you. That's the point of your first week. ` +
       `after it I'll tell you exactly how many players ${target} takes.\n\n👉 The plan until then is simple: *your first 5 players*.`
     );
   }

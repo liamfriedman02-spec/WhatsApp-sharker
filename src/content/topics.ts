@@ -67,7 +67,7 @@ export const TOPICS: Topic[] = [
     personal: ({ boss }) =>
       boss.brandLaunchedAt
         ? `📍 *${boss.brandName}* is live with ${plural(boss.stats.totalPlayers, "player", "players")}.`
-        : `📍 *${boss.brandName}* isn't live yet — finish your launch in your Boss Hub.`,
+        : `📍 *${boss.brandName}* isn't live yet. Finish your launch in your Boss Hub.`,
     cta: () => "brand_link",
     keywords: ["brand", "my brand", "how does my brand work", "link", "brand link", "launch"],
   },
@@ -97,7 +97,7 @@ export const TOPICS: Topic[] = [
       "Fastest ways to bring players:\n" +
       "1. Share your brand link on WhatsApp status and groups\n" +
       "2. Post it on Instagram, TikTok and your other socials\n" +
-      "3. Post regularly — or let your AI Agent do it for you\n\n" +
+      "3. Post regularly. Or let your AI Agent do it for you\n\n" +
       "Tip: start with the people who already know you.",
     personal: ({ boss }) =>
       boss.stats.totalPlayers > 0
@@ -113,11 +113,11 @@ export const TOPICS: Topic[] = [
     description: "Your control center, explained",
     body:
       "Your Boss Hub is the control center of your business.\n\n" +
-      "• *Dashboard* – your players, activity and earnings\n" +
-      "• *My Brand* – your brand link and settings\n" +
-      "• *Earnings* – what you earned and your payouts\n" +
-      "• *AI Agent* – your automatic marketing\n" +
-      "• *Support* – help whenever you need it\n\n" +
+      "• *Dashboard*: your players, activity and earnings\n" +
+      "• *My Brand*: your brand link and settings\n" +
+      "• *Earnings*: what you earned and your payouts\n" +
+      "• *AI Agent*: your automatic marketing\n" +
+      "• *Support*: help whenever you need it\n\n" +
       "Tip: check your Dashboard once a day to see your business grow.",
     cta: () => "dashboard",
     keywords: ["hub", "boss hub", "dashboard", "panel", "control", "login", "account", "where do i"],
@@ -135,7 +135,7 @@ export const TOPICS: Topic[] = [
     personal: ({ boss }) =>
       boss.payouts.methodConfigured
         ? "📍 Your payout method is set up ✅"
-        : "📍 You haven't added a payout method yet — do it now so nothing gets delayed.",
+        : "📍 You haven't added a payout method yet. Do it now so nothing gets delayed.",
     cta: ({ boss }) => (boss.payouts.methodConfigured ? "earnings" : "payouts"),
     guide: "setup_payouts",
     keywords: ["payment", "payments", "payout", "payouts", "paid", "withdraw", "withdrawal", "bank", "balance", "transfer"],
@@ -173,13 +173,13 @@ export const TOPICS: Topic[] = [
     description: "Your marketer that works 24/7",
     body:
       "Your *AI Marketing Agent* is your personal marketer. It works 24/7 for your brand.\n\n" +
-      "It creates content for your brand and publishes it on your connected social accounts — automatically.\n\n" +
+      "It creates content for your brand and publishes it on your connected social accounts. Automatically.\n\n" +
       "*You launched your business. Now let AI market it for you.*",
     personal: (ctx) =>
       ctx.stage === "live"
         ? "📍 Your AI Agent is live ✅"
         : ctx.stage === "needs_socials"
-          ? "📍 Your AI Agent is active — connect your socials so it can start posting."
+          ? "📍 Your AI Agent is active. Connect your socials so it can start posting."
           : "📍 Your AI Agent isn't active yet.",
     cta: (ctx) => agentCta(ctx.stage),
     guide: "activate_agent",
@@ -193,7 +193,7 @@ export const TOPICS: Topic[] = [
       "3 steps to put your marketing on autopilot:\n\n" +
       "1. Activate your AI Agent in your Boss Hub\n" +
       "2. Connect your social accounts\n" +
-      "3. Your Agent creates and publishes content for your brand — automatically\n\n" +
+      "3. Your Agent creates and publishes content for your brand. Automatically\n\n" +
       "You can see everything it publishes in Boss Hub → *AI Agent*.",
     personal: (ctx) => `Your progress:\n${agentChecklist(ctx.stage)}`,
     cta: (ctx) => agentCta(ctx.stage),

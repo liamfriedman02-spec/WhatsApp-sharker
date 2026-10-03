@@ -80,13 +80,13 @@ export function computeInsights(ctx: ContentCtx, snapshots: StatSnapshot[], toda
   if (newPlayers.changePct !== null && (newPlayers.previous ?? 0) >= 3 && newPlayers.changePct <= -20) {
     tips.push({ id: "players_down", tone: "warn", priority: 90, text: `👥 New players are down ${Math.abs(newPlayers.changePct)}% vs last week (${num(newPlayers.current)} vs ${num(newPlayers.previous!)}). Let's push your link this week.` });
   } else if (newPlayers.changePct !== null && newPlayers.current > 0 && newPlayers.changePct >= 10) {
-    tips.push({ id: "players_up", tone: "good", priority: 60, text: `👥 ${num(newPlayers.current)} new players this week — up ${newPlayers.changePct}% vs last week. Keep the momentum!` });
+    tips.push({ id: "players_up", tone: "good", priority: 60, text: `👥 ${num(newPlayers.current)} new players this week. Up ${newPlayers.changePct}% vs last week. Keep the momentum!` });
   }
 
   if (earnings.changePct !== null && (earnings.previous ?? 0) > 0 && earnings.changePct <= -20) {
     tips.push({ id: "earnings_down", tone: "warn", priority: 85, text: `💰 Your earnings are down ${Math.abs(earnings.changePct)}% vs last week (${money(earnings.current, cur)} vs ${money(earnings.previous!, cur)}). Bringing players back is the fastest fix.` });
   } else if (earnings.changePct !== null && earnings.current > 0 && earnings.changePct >= 10) {
-    tips.push({ id: "earnings_up", tone: "good", priority: 55, text: `💰 You earned ${money(earnings.current, cur)} this week — up ${earnings.changePct}% vs last week. 🚀` });
+    tips.push({ id: "earnings_up", tone: "good", priority: 55, text: `💰 You earned ${money(earnings.current, cur)} this week. Up ${earnings.changePct}% vs last week. 🚀` });
   }
 
   if (earningsPerActive !== null && inactivePlayers >= 5) {
@@ -100,11 +100,11 @@ export function computeInsights(ctx: ContentCtx, snapshots: StatSnapshot[], toda
   }
 
   if (activationRate !== null && s.totalPlayers >= 10 && activationRate < 0.35) {
-    tips.push({ id: "low_activation", tone: "warn", priority: 75, text: `🔥 Only ${Math.round(activationRate * 100)}% of your players were active this week. Your players are your earnings — invite them back.` });
+    tips.push({ id: "low_activation", tone: "warn", priority: 75, text: `🔥 Only ${Math.round(activationRate * 100)}% of your players were active this week. Your players are your earnings. Invite them back.` });
   }
 
   if (ctx.stage !== "live") {
-    tips.push({ id: "agent_missing", tone: "info", priority: 70, text: "🤖 Your AI Agent isn't posting for you yet — that's daily marketing for your brand you're not getting." });
+    tips.push({ id: "agent_missing", tone: "info", priority: 70, text: "🤖 Your AI Agent isn't posting for you yet. That's daily marketing for your brand you're not getting." });
   } else if (ctx.boss.aiAgent.postsPublished7d > 0) {
     tips.push({ id: "agent_working", tone: "good", priority: 40, text: `🤖 Your AI Agent published ${num(ctx.boss.aiAgent.postsPublished7d)} posts for your brand this week.` });
   }

@@ -72,10 +72,10 @@ describe("ClaudeAssistant", () => {
     expect(schema.properties.guide!.description).toContain("connect_socials");
   });
 
-  it("drops unknown button ids instead of failing the answer", async () => {
+  it("drops unknown button ids instead of failing the answer, and turns dashes into human punctuation", async () => {
     const { client } = fakeClient({
       text: JSON.stringify({
-        reply: "Hi!",
+        reply: "Hi — let's go!",
         cta: "made_up_page",
         guide: "nope",
         escalate_to_human: false,
@@ -89,7 +89,7 @@ describe("ClaudeAssistant", () => {
     });
     const assistant = new ClaudeAssistant({ client, model: "claude-opus-5", effort: "low", logger: silentLogger });
     expect(await assistant.answer({ ctx, question: "hi", history: [], flow: null })).toEqual({
-      reply: "Hi!",
+      reply: "Hi, let's go!",
       cta: null,
       guide: null,
       escalate: false,
