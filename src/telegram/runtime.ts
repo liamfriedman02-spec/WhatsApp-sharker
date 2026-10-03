@@ -36,7 +36,10 @@ export function handleTelegramUpdate(update: TgUpdate, { api, router, queue, log
  */
 export async function startTelegram(config: Config, deps: Deps): Promise<() => void> {
   const { api, logger } = deps;
-  await api.setCommands(TELEGRAM_COMMANDS).catch((err) => logger.warn("telegram: setMyCommands failed", { err }));
+  const commands = config.sharker.apiBaseUrl
+    ? TELEGRAM_COMMANDS
+    : [...TELEGRAM_COMMANDS, { command: "demo", description: "Switch demo Boss profile" }];
+  await api.setCommands(commands).catch((err) => logger.warn("telegram: setMyCommands failed", { err }));
 
   if (config.telegram.mode === "webhook") {
     if (!config.publicUrl) throw new Error("TELEGRAM_MODE=webhook needs PUBLIC_URL");

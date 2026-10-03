@@ -13,7 +13,8 @@ export type Command =
   | "learn"
   | "mission"
   | "progress"
-  | "post";
+  | "post"
+  | "demo";
 
 /** Short exact-match commands (after normalization). Everything else goes to the assistant. */
 const COMMANDS: Record<Command, string[]> = {
@@ -29,6 +30,7 @@ const COMMANDS: Record<Command, string[]> = {
   mission: ["mission", "my mission", "today's mission", "todays mission", "daily mission", "challenge", "what should i do today"],
   progress: ["progress", "my progress", "goal", "my goal", "level", "my level", "points", "streak", "coach"],
   post: ["post", "write a post", "write me a post", "caption", "post ideas", "content"],
+  demo: ["demo", "demo mode", "switch boss", "switch profile", "profiles"],
 };
 
 export function normalize(text: string): string {

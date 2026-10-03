@@ -3,6 +3,7 @@
  * outbound messages, so they're easy to test and to preview in the simulator.
  */
 import { formatChange } from "../coach/insights.js";
+import { DEMO_PERSONAS } from "../platform/demoPlatform.js";
 import type { CoachIntensity } from "../coach/types.js";
 import { agentChecklist, agentStatusMessage } from "../content/agent.js";
 import type { ContentCtx } from "../content/context.js";
@@ -45,7 +46,7 @@ export function mainMenu(ctx: ContentCtx): OutboundMessage {
     kind: "list",
     header: "Your Boss Coach",
     body: `Hi ${boss.firstName}! 👋 What do you want to do for *${boss.brandName}* today?\n\n👉 Your next step: ${nba.text}.${streak}`,
-    footer: "Tip: you can also just type your question",
+    footer: ctx.demo ? "🧪 Demo · type DEMO to switch Boss profile" : "Tip: you can also just type your question",
     buttonLabel: "Open menu",
     sections: [
       {
@@ -305,8 +306,20 @@ export function telegramLinkRequest(name: string | undefined, retry = false): Ou
   };
 }
 
-export function telegramLinkedMessage(boss: { firstName: string; brandName: string }): OutboundMessage {
-  return { kind: "text", text: `✅ Connected! Welcome, ${boss.firstName} — I'm your coach for *${boss.brandName}*.` };
+export function telegramLinkedMessage(boss: { firstName: string; brandName: string }, demo = false): OutboundMessage {
+  const hint = demo ? `\n\n🧪 Demo mode: you're testing as *${boss.firstName}*. Type *demo* anytime to switch Boss profile.` : "";
+  return { kind: "text", text: `✅ Connected! Welcome, ${boss.firstName} — I'm your coach for *${boss.brandName}*.${hint}` };
+}
+
+export function demoMenu(current?: string): OutboundMessage {
+  return {
+    kind: "list",
+    body:
+      "🧪 *Demo mode*\n\nPick a Boss profile to test. Each one is a different situation, and your progress in each profile is kept." +
+      (current ? `\n\nYou're testing as: *${current}*` : ""),
+    buttonLabel: "Pick a profile",
+    sections: [{ title: "Boss profiles", rows: DEMO_PERSONAS.map((p) => ({ id: `demo:${p.id}`, title: p.title, description: p.description })) }],
+  };
 }
 
 export function telegramNotABossMessage(): OutboundMessage {

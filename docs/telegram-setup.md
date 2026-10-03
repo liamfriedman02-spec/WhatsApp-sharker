@@ -31,8 +31,21 @@ chat to the Boss account with that number. From then on:
 - proactive coaching goes to the app the Boss used last (Telegram or WhatsApp)
 - the commands menu has `/menu`, `/mission`, `/progress`, `/post`, `/help`
 
-Before the Sharker API is connected, set `DEMO_BOSS_PHONE` to your number so sharing your phone links you to
-a demo Boss.
+### Demo mode (before the Sharker API is connected)
+
+Without `SHARKER_API_BASE_URL`, any number that shares its phone becomes a demo Boss (the `DEMO_BOSS_ID`
+profile, Carla by default) with a week of stats history, so every screen has real-looking data. Type
+`demo` (or `/demo`) to switch between the four profiles:
+
+| Profile | Situation |
+| --- | --- |
+| 🌱 Ana | Just launched, no players yet, AI Agent off |
+| 🤖 Bruno | First players, Agent on but socials not connected |
+| 💎 Carla | 248 players, Agent live, earning every day |
+| 📉 Diego | Away 12 days, new players dropping |
+
+Progress in each profile (missions, points, goals) is kept when you switch back. Demo data lives in memory and
+resets when the server restarts.
 
 ## Notes
 

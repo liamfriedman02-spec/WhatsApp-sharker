@@ -36,6 +36,10 @@ export class InMemoryPlatform implements SharkerPlatform {
     this.bosses.set(boss.id, structuredClone(boss));
   }
 
+  remove(bossId: string): void {
+    this.bosses.delete(bossId);
+  }
+
   update(bossId: string, patch: DeepPartial<BossProfile>): BossProfile {
     const current = this.bosses.get(bossId);
     if (!current) throw new Error(`Unknown boss ${bossId}`);

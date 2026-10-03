@@ -3,6 +3,7 @@ import { SYSTEM_PROMPT } from "../src/ai/assistant.js";
 import {
   aiAgentMessages,
   businessSnapshot,
+  demoMenu,
   faqCategoryMenu,
   faqMessages,
   guideStepMessage,
@@ -18,6 +19,7 @@ import { GUIDES } from "../src/content/guides.js";
 import { CTAS, CTA_IDS } from "../src/content/links.js";
 import { NUDGES, type NudgeTemplate } from "../src/content/nudges.js";
 import { TOPICS } from "../src/content/topics.js";
+import { DEMO_PERSONAS } from "../src/platform/demoPlatform.js";
 import { demoBosses } from "../src/platform/mockPlatform.js";
 import { renderNudge } from "../src/retention/render.js";
 import { TRIGGERS } from "../src/retention/triggers.js";
@@ -48,14 +50,14 @@ const triggerInput = (ctx: (typeof ctxs)[number]) => ({ ctx, coach: ctx.coach!, 
 
 /** Every reply id the router understands. */
 const ROUTABLE =
-  /^(menu:\w+|nba|learn:\w+|help:\w+|faq:\w+|feedback:(solved|unsolved):\w+|guide:\w+|guide_step:(done|stuck|exit|check)|handoff:(start|cancel|close)|settings:(digest:(daily|weekly|off)|coach:(light|standard|intense)|pause|resume)|ask:ai|mission:(today|done|skip|bonus|help)|goal:(accept|higher|lower|new)|coach:(progress|session)|post:write|followup:(done|notyet))$/;
+  /^(menu:\w+|nba|learn:\w+|help:\w+|faq:\w+|feedback:(solved|unsolved):\w+|guide:\w+|guide_step:(done|stuck|exit|check)|handoff:(start|cancel|close)|settings:(digest:(daily|weekly|off)|coach:(light|standard|intense)|pause|resume)|ask:ai|mission:(today|done|skip|bonus|help)|goal:(accept|higher|lower|new)|coach:(progress|session)|post:write|followup:(done|notyet)|demo:(ana|bruno|carla|diego))$/;
 
 function allViews(): OutboundMessage[] {
   const store = new SqliteStore(":memory:");
-  const out: OutboundMessage[] = [learnMenu(), helpMenu()];
+  const out: OutboundMessage[] = [learnMenu(), helpMenu(), demoMenu(), demoMenu(DEMO_PERSONAS[0]!.title)];
   for (const c of FAQ_CATEGORIES) out.push(faqCategoryMenu(c.id));
   for (const ctx of ctxs) {
-    out.push(mainMenu(ctx), businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
+    out.push(mainMenu(ctx), mainMenu({ ...ctx, demo: true }),businessSnapshot(ctx), nextActionMessage(ctx), ...aiAgentMessages(ctx));
     out.push(progressMessage(ctx, ctx.coach!), coachSessionMessage(ctx, ctx.coach!, MISSIONS[0]!), ...postsMessages(ctx, fallbackPosts(ctx)));
     out.push(goalProposalMessage(ctx, proposeGoal(ctx.boss, ctx.coach!.insights, MONDAY_NOON), ctx.coach!));
     for (const m of MISSIONS) out.push(missionMessage(ctx, m, ctx.coach!));

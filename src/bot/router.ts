@@ -3,6 +3,7 @@ import { formatAmount } from "../coach/goals.js";
 import type { CoachService, CoachView } from "../coach/service.js";
 import type { CoachIntensity } from "../coach/types.js";
 import { bossAddress, telegramAddress } from "../channels.js";
+import { personaId, type DemoPlatform } from "../platform/demoPlatform.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
 import { getFaq, type FaqCategoryId, FAQ_CATEGORIES } from "../content/faq.js";
@@ -44,6 +45,7 @@ import {
   mainMenu,
   notABossMessage,
   settingsMenu,
+  demoMenu,
   telegramLinkRequest,
   telegramLinkedMessage,
   telegramNotABossMessage,
@@ -62,6 +64,8 @@ export interface RouterDeps {
   logger: Logger;
   /** Whether Telegram is configured (replies to support agents etc. may go there). */
   telegramEnabled?: boolean;
+  /** Set in demo mode: lets testers switch between demo Boss profiles. */
+  demo?: DemoPlatform;
   now?: () => Date;
 }
 
@@ -111,6 +115,7 @@ export class BotRouter {
     if (channel === "telegram") state.telegramChatId = msg.from;
     else state.waLastInboundAt = now.toISOString();
     const ctx = contentCtx(boss, { now, hubUrl: config.sharker.bossHubUrl, defaultTimezone: config.retention.defaultTimezone });
+    ctx.demo = !!this.deps.demo;
     // Loading the coach view also records today's stats snapshot for week-over-week insights.
     const coach = await this.deps.coach.view(ctx);
     ctx.coach = coach;
@@ -119,7 +124,7 @@ export class BotRouter {
     await store.logMessage(boss.id, "in", describeInbound(msg), "boss", now);
     try {
       if (justLinked) {
-        this.push(turn, telegramLinkedMessage(boss));
+        this.push(turn, telegramLinkedMessage(boss, !!this.deps.demo));
         this.push(turn, mainMenu(ctx));
       } else {
         await this.dispatch(turn, msg);
@@ -133,8 +138,8 @@ export class BotRouter {
         buttons: [BTN.menu, BTN.human],
       });
     }
-    state.updatedAt = now.toISOString();
-    await store.saveState(state);
+    turn.state.updatedAt = now.toISOString();
+    await store.saveState(turn.state);
     await this.flush(turn);
   }
 
@@ -200,6 +205,10 @@ export class BotRouter {
 
     if (cmd === "stop") return this.setOptOut(t, true);
     if (cmd === "start") return this.setOptOut(t, false);
+    if (cmd === "demo" && this.deps.demo) {
+      t.state.flow = null;
+      return this.push(t, demoMenu(this.deps.demo.personaOf(t.boss)?.title));
+    }
 
     if (t.state.mode === "awaiting_handoff") {
       if (cmd === "menu") {
@@ -259,6 +268,8 @@ export class BotRouter {
         return this.writePosts(t);
       case "followup":
         return this.onFollowUpReply(t, arg === "done");
+      case "demo":
+        return this.switchDemo(t, arg ?? "");
       case "learn": {
         const topic = getTopic(arg ?? "");
         return topic ? this.pushAll(t, topicMessages(topic, t.ctx)) : this.push(t, learnMenu());
@@ -460,6 +471,34 @@ export class BotRouter {
       body: "No problem — tell me what's happening in your own words and I'll help you. Or talk to a person from our team.",
       buttons: [BTN.human, { id: "guide_step:exit", title: "✖️ Exit guide" }],
     });
+  }
+
+  // ── Demo mode ─────────────────────────────────────────────────────────────
+
+  /** Turns this number into another demo Boss profile and shows its menu. */
+  private async switchDemo(t: Turn, value: string): Promise<void> {
+    const demo = this.deps.demo;
+    const persona = personaId(value);
+    if (!demo || !persona) return this.push(t, demo ? demoMenu() : mainMenu(t.ctx));
+    const { store, config, coach } = this.deps;
+    const boss = await demo.assign(t.boss.phone, persona);
+    const state = await store.getState(boss.id, boss.phone);
+    // The new profile is reached on the same channel as the old one.
+    state.channel = t.state.channel;
+    state.telegramChatId = t.state.telegramChatId;
+    state.lastInboundAt = t.state.lastInboundAt;
+    state.waLastInboundAt = t.state.waLastInboundAt;
+    await store.saveState({ ...t.state, flow: null });
+    t.boss = boss;
+    t.state = state;
+    t.ctx = contentCtx(boss, { now: t.ctx.now, hubUrl: config.sharker.bossHubUrl, defaultTimezone: config.retention.defaultTimezone });
+    t.ctx.demo = true;
+    t.coach = await coach.view(t.ctx);
+    t.ctx.coach = t.coach;
+    const p = demo.personaOf(boss)!;
+    this.deps.logger.info("demo profile switched", { bossId: boss.id });
+    this.push(t, { kind: "text", text: `🧪 You're now testing as *${boss.firstName}* — *${boss.brandName}*.\n${p.description}` });
+    this.push(t, mainMenu(t.ctx));
   }
 
   // ── Coaching ──────────────────────────────────────────────────────────────

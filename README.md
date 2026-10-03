@@ -87,7 +87,7 @@ Proactive coaching follows the Boss to the app they used last.
 | `src/bot/` | Conversation: `router.ts` (every inbound message), `views.ts` + `coachViews.ts` (screens), `intents.ts` (commands and keyword search), `handoff.ts` (human support). |
 | `src/ai/` | Claude coach and post writer. The knowledge base is built from `src/content`; Boss and coach data are added to each request. |
 | `src/retention/` | Triggers, frequency caps and the 24h-window channel choice (`engine.ts`, `triggers.ts`). |
-| `src/platform/` | Sharker API client plus the in-memory demo platform (with demo history). |
+| `src/platform/` | Sharker API client plus the demo platform: any number becomes a demo Boss, with demo history. |
 | `src/whatsapp/` | Cloud API client, webhook parsing, signature checks, message-limit validation. |
 | `src/telegram/` | Telegram Bot API client, HTML formatting, update parsing, webhook/polling runtime. |
 | `src/channels.ts` | Addresses (`5511…` = WhatsApp, `tg:123…` = Telegram) and routing messages to the right channel. |
@@ -141,7 +141,7 @@ Preview any Boss without sending anything: `GET /admin/retention/preview/{bossId
 ## Going live checklist
 
 1. **Sharker platform**: implement the read API and events webhook in [`docs/platform-api.md`](docs/platform-api.md), and collect `whatsappOptIn` during Boss onboarding. Add `brandUrl` so posts include the real link.
-2. **Meta**: follow [`docs/whatsapp-setup.md`](docs/whatsapp-setup.md). You create the Meta app, fill in `.env` and point the webhook at `https://<host>/webhooks/whatsapp`. Before the Sharker API exists, `DEMO_BOSS_PHONE` lets you chat as a demo Boss from your own phone.
+2. **Meta**: follow [`docs/whatsapp-setup.md`](docs/whatsapp-setup.md). You create the Meta app, fill in `.env` and point the webhook at `https://<host>/webhooks/whatsapp`. Before the Sharker API exists, any number that writes becomes a demo Boss (`DEMO_BOSS_ID` picks the starting profile), and typing `demo` switches between the four profiles.
 3. **Telegram (optional)**: create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN` ([`docs/telegram-setup.md`](docs/telegram-setup.md)). On Render the webhook registers itself.
 4. **Templates**: run `npm run templates:export` to print all 27 proactive messages as Meta template payloads (`-- --submit` submits them). They must be approved before they can be sent outside the 24h window.
 5. **Content & tuning**: the copy in `src/content/` is a first draft. The Sharker team must verify every factual statement (earnings, payouts, GCOIN, Boss Hub section names), the Boss Hub paths in `links.ts`, the level thresholds in `levels.ts`, and the mission list in `missions.ts`.

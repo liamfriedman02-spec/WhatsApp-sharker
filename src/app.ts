@@ -6,7 +6,7 @@ import { CoachService } from "./coach/service.js";
 import { BotRouter } from "./bot/router.js";
 import type { Config } from "./config.js";
 import type { Logger } from "./logger.js";
-import { InMemoryPlatform, demoBosses } from "./platform/mockPlatform.js";
+import { DemoPlatform, personaId } from "./platform/demoPlatform.js";
 import { SharkerApiPlatform } from "./platform/sharkerApi.js";
 import type { SharkerPlatform } from "./platform/types.js";
 import { RetentionEngine } from "./retention/engine.js";
@@ -42,9 +42,9 @@ export interface AppOverrides {
 
 /** Wires every dependency from config. Tests and the simulator pass overrides. */
 export function createApp(config: Config, logger: Logger, overrides: AppOverrides = {}): App {
-  const platform = overrides.platform ?? createPlatform(config, logger);
-
   const store = overrides.store ?? new SqliteStore(config.databasePath);
+  const platform = overrides.platform ?? createPlatform(config, logger, store);
+  const demo = platform instanceof DemoPlatform ? platform : undefined;
 
   const whatsapp: Messenger = config.whatsapp.dryRun
     ? (logger.warn("WhatsApp dry-run: messages are logged, not sent"),
@@ -80,24 +80,26 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
     (config.support.webhookUrl ? new WebhookSupportDesk(config.support.webhookUrl, logger) : new LogSupportDesk(logger));
 
   const coach = new CoachService({ store, platform, logger });
-  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, telegramEnabled, now: overrides.now });
+  const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, telegramEnabled, demo, now: overrides.now });
   const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, telegramEnabled, now: overrides.now });
 
   return { config, logger, platform, store, messenger, telegramApi, assistant, supportDesk, coach, router, retention };
 }
 
-function createPlatform(config: Config, logger: Logger): SharkerPlatform {
+function createPlatform(config: Config, logger: Logger, store: Store): SharkerPlatform {
   if (config.sharker.apiBaseUrl) {
     return new SharkerApiPlatform({ baseUrl: config.sharker.apiBaseUrl, apiKey: config.sharker.apiKey });
   }
-  logger.warn("SHARKER_API_BASE_URL not set — using demo Bosses (development only)");
-  const bosses = demoBosses();
+  logger.warn("SHARKER_API_BASE_URL not set — demo mode: every new number becomes a demo Boss (type DEMO to switch profile)");
   const { demoBossPhone, demoBossId } = config.sharker;
-  if (demoBossPhone) {
-    // Lets you test from your own WhatsApp before the Sharker API exists.
-    const boss = bosses.find((b) => b.id === demoBossId);
-    if (boss) boss.phone = demoBossPhone;
-    logger.info("demo Boss linked to your WhatsApp number", { bossId: demoBossId });
-  }
-  return new InMemoryPlatform(bosses);
+  const defaultPersona = personaId(demoBossId) ?? "carla";
+  return new DemoPlatform({
+    defaultPersona,
+    preassigned: demoBossPhone ? { [demoBossPhone]: defaultPersona } : {},
+    // Give each demo Boss a week of history so trends and insights show up right away.
+    onCreate: async (boss, history) => {
+      for (const snap of history) await store.saveSnapshot(boss.id, snap);
+      logger.info("demo Boss created", { bossId: boss.id });
+    },
+  });
 }

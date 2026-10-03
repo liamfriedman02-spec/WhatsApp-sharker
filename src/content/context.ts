@@ -10,6 +10,8 @@ export interface ContentCtx {
   timezone: string;
   /** The coach's view (insights, goal, level, mission) when it has been loaded. */
   coach?: CoachView;
+  /** Demo mode (no Sharker API): screens show how to switch demo profiles. */
+  demo?: boolean;
 }
 
 export function contentCtx(boss: BossProfile, opts: { now?: Date; hubUrl: string; defaultTimezone: string }): ContentCtx {
