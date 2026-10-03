@@ -18,13 +18,22 @@ export interface PlannedStep {
   playbook: Playbook;
   index: number;
   step: PlaybookStep;
-  /** True when this step hasn't been opened yet (a new day of the plan). */
+  /** True when this step hasn't been opened today yet (a new day of the plan). */
   opensNew: boolean;
+  /**
+   * Mornings in a row this step has stayed undone (counting today's reopening): 0 = a fresh step,
+   * 1 = "yesterday's step is still waiting", 2 = "what's in the way?", 3+ = the coach pauses.
+   */
+  missed: number;
 }
 
+/** After this many undone mornings in a row the plan pauses (and the team is told). */
+export const PAUSE_AFTER_MISSED = 3;
+
 /**
- * The playbook step for today: the step opened today, or the next one when a new local day
- * has started. "finished" once the day after the last step arrives; null without an active plan.
+ * The playbook step for today. A new local day moves on only when the current step was done;
+ * an undone step is reopened (never skipped silently), and `missed` counts how long it's waited.
+ * "finished" once the day after the last step arrives; null without an active plan.
  */
 export function plannedStep(ctx: ContentCtx): PlannedStep | "finished" | null {
   const coach = coachOf(ctx);
@@ -32,10 +41,19 @@ export function plannedStep(ctx: ContentCtx): PlannedStep | "finished" | null {
   if (!pb || pb.status !== "active") return null;
   const playbook = getPlaybook(pb.id);
   if (!playbook) return null;
-  if (pb.stepDate >= coach.today) return { playbook, index: pb.step, step: playbook.steps[pb.step]!, opensNew: false };
+  const missed = pb.missed ?? 0;
+  if (pb.stepDate >= coach.today) return { playbook, index: pb.step, step: playbook.steps[pb.step]!, opensNew: false, missed };
+  // Any mission finished on the step's day counts: the Boss did the work (verified missions included).
+  const done = coach.history.some((r) => r.date === pb.stepDate && r.status === "done");
+  if (!done) return { playbook, index: pb.step, step: playbook.steps[pb.step]!, opensNew: true, missed: missed + 1 };
   const next = pb.step + 1;
   if (next >= playbook.steps.length) return "finished";
-  return { playbook, index: next, step: playbook.steps[next]!, opensNew: true };
+  return { playbook, index: next, step: playbook.steps[next]!, opensNew: true, missed: 0 };
+}
+
+/** The 2-minute version of a step (always a lowercase, single-line action). */
+export function smallStep(ctx: ContentCtx, planned: PlannedStep): string {
+  return planned.step.small?.(ctx, coachOf(ctx).state) ?? lowerFirst(stepMission(ctx, planned).title);
 }
 
 /** The mission a playbook step assigns for this Boss today. */

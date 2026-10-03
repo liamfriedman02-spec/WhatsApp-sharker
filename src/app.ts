@@ -75,7 +75,7 @@ export function createApp(config: Config, logger: Logger, overrides: AppOverride
 
   const coach = new CoachService({ store, platform, logger });
   const router = new BotRouter({ platform, store, messenger, assistant, supportDesk, coach, config, logger, telegramEnabled, demo, now: overrides.now });
-  const retention = new RetentionEngine({ platform, store, messenger, coach, config, logger, telegramEnabled, now: overrides.now });
+  const retention = new RetentionEngine({ platform, store, messenger, coach, supportDesk, config, logger, telegramEnabled, now: overrides.now });
 
   return { config, logger, platform, store, messenger, telegramApi, assistant, supportDesk, coach, router, retention };
 }

@@ -19,7 +19,7 @@ describe("conversation basics", () => {
     expect(home?.kind).toBe("buttons");
     expect(textOf(home)).toContain("Hi Ana!");
     expect(textOf(home)).toContain("Here's the plan for *Ana Arena* today");
-    expect(textOf(home)).toContain("7-day launch sprint");
+    expect(textOf(home)).toContain("Launch program");
     expect(ids(home)).toEqual(["play:start:launch", "menu:business", "menu:more"]);
 
     const [more] = await h.tap(PHONES.ana, "menu:more");

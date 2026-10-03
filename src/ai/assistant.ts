@@ -142,6 +142,7 @@ You lead
 Plans, campaigns and channels
 - Plans the bot runs day by day (COACH DATA shows the active one and today's step; keep the Boss on it. Today's step is today's mission):
 ${PLAYBOOK_NOTES}
+- The launch program teaches as it goes: every day one lesson about how the money works (players join through the link, they play, the Boss earns from their activity), then one task. If the Boss says they have no time, don't know how, or doubt it works, don't argue: make the step smaller (the 2-minute version), walk them through it, or explain the money with their own numbers. Never guilt-trip a Boss who went quiet.
 - When the Boss wants a campaign for an occasion or their own idea (a holiday, an event, a theme), design it right in the reply: 3 days, one action per day, a ready text for each day. Remember it.
 - Marketing channels, in the order we open them (the next channel to open is in COACH DATA; offer its guide, button channels:menu):
 ${CHANNEL_NOTES}
@@ -360,14 +361,23 @@ export function userMessage({ ctx, question, history, flow }: AssistantInput): s
 
   function planLine(c: ContentCtx): string {
     const state = c.coach!.state;
-    const pb = state.playbook?.status === "active" ? getPlaybook(state.playbook.id) : undefined;
+    const prefs = state.prefs;
+    const about = prefs.onboardedAt
+      ? `; the Boss has about ${prefs.minutesPerDay ?? 10} minutes a day, prefers the ${prefs.preferredHour === 18 ? "evening" : prefs.preferredHour === 13 ? "afternoon" : "morning"}, and started with ${prefs.socials.length ? prefs.socials.join(" and ") : "no social pages"}`
+      : "";
+    const pb = state.playbook && (state.playbook.status === "active" || state.playbook.status === "paused") ? getPlaybook(state.playbook.id) : undefined;
     if (pb && state.playbook) {
       const step = pb.steps[state.playbook.step];
+      if (state.playbook.status === "paused") {
+        return `Plan: ${pb.title} is PAUSED at day ${state.playbook.step + 1} (${step?.title ?? ""}) because the Boss went quiet. Welcome them back warmly, no guilt, and make the next step small (button play:today)${about}`;
+      }
+      const missed = state.playbook.missed ?? 0;
       const opened = state.playbook.stepDate >= c.coach!.today ? "opened today" : "yesterday's step; a new day is due";
-      return `Plan: ${pb.title}, day ${state.playbook.step + 1} of ${pb.steps.length}. ${step?.title ?? ""} (${opened})`;
+      const waiting = missed > 0 ? `; this step has waited ${missed} day(s) undone, so be extra encouraging and offer the 2-minute version: ${step?.small?.(c, state) ?? "a smaller first move"}` : "";
+      return `Plan: ${pb.title}, day ${state.playbook.step + 1} of ${pb.steps.length}: ${step?.title ?? ""} (${opened})${waiting}${about}`;
     }
     const proposed = proposePlaybook(c, state);
-    return proposed ? `Plan: none active; the coach would propose "${proposed.title}" (button play:menu)` : "Plan: none active";
+    return (proposed ? `Plan: none active; the coach would propose "${proposed.title}" (button play:menu)` : "Plan: none active") + about;
   }
 
   function channelsLine(c: ContentCtx): string {

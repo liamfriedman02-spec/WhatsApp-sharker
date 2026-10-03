@@ -14,7 +14,7 @@
  * Coaching triggers (missions, goals, levels, momentum, follow-ups) read the coach view and
  * persist what they sent through `onSent` (e.g. the mission becomes today's mission).
  */
-import { plannedMission, plannedProposal, plannedStep } from "../coach/plan.js";
+import { PAUSE_AFTER_MISSED, plannedMission, plannedProposal, plannedStep } from "../coach/plan.js";
 import type { CoachService, CoachView } from "../coach/service.js";
 import type { ContentCtx } from "../content/context.js";
 import { NUDGES, type NudgeTemplate } from "../content/nudges.js";
@@ -46,6 +46,8 @@ export interface Trigger {
   template(input: TriggerInput, step: number): NudgeTemplate;
   /** Persists coaching side effects after the message went out. */
   onSent?(input: TriggerInput, coach: CoachService): Promise<void>;
+  /** When this send means a person on the team should step in: the reason (sent to the support desk). */
+  alertTeam?(input: TriggerInput): string | null;
 }
 
 const launchedDaysAgo = ({ ctx }: TriggerInput) => daysBetween(ctx.boss.brandLaunchedAt, ctx.now);
@@ -159,13 +161,44 @@ export const TRIGGERS: Trigger[] = [
     category: "reminder",
     priority: 83,
     schedule: { type: "recurring" },
-    // A new day of the Boss's plan: the coach opens the step and hands over the texts.
-    when: ({ ctx, local }) => {
+    // A new day of the Boss's plan, at the hour they chose. A step that wasn't done is reopened
+    // (never skipped) and the message climbs a gentle ladder: today's step → "still waiting,
+    // here's the 2-minute version" → "what's in the way?" → pause the plan and tell the team.
+    when: ({ ctx, local, coach }) => {
       const p = plannedStep(ctx);
-      return p !== null && p !== "finished" && p.opensNew && local.hour >= 9 && local.hour < 20;
+      if (p === null || p === "finished" || !p.opensNew) return false;
+      return local.hour >= Math.min(coach.state.prefs.preferredHour ?? 9, 18) && local.hour < 20;
     },
-    template: () => NUDGES.playbook_step,
+    template: ({ ctx }) => {
+      const p = plannedStep(ctx);
+      const missed = p && p !== "finished" ? p.missed : 0;
+      if (missed >= PAUSE_AFTER_MISSED) return NUDGES.playbook_paused;
+      return missed === 2 ? NUDGES.playbook_stuck : missed === 1 ? NUDGES.playbook_retry : NUDGES.playbook_step;
+    },
     onSent: async ({ ctx, coach }, svc) => void (await svc.openStep(ctx, coach)),
+    alertTeam: ({ ctx }) => {
+      const p = plannedStep(ctx);
+      if (!p || p === "finished" || p.missed < PAUSE_AFTER_MISSED) return null;
+      return `No progress for ${p.missed} days on day ${p.index + 1} of ${p.playbook.title} ("${p.step.title}"). The plan is paused; a personal message now can bring them back.`;
+    },
+  },
+  {
+    id: "plan_checkin",
+    category: "reminder",
+    priority: 82,
+    schedule: { type: "recurring" },
+    // The evening of a plan day: the step isn't done and the Boss hasn't written since it opened.
+    when: ({ ctx, coach, state, local, lastSent }) => {
+      const pb = coach.state.playbook;
+      if (!pb || pb.status !== "active" || pb.stepDate !== local.date || (pb.missed ?? 0) >= 2) return false;
+      if (local.hour < 18 || local.hour >= 20 || (coach.state.prefs.preferredHour ?? 9) >= 15) return false;
+      if (coach.history.some((r) => r.date === local.date && r.status === "done")) return false;
+      const opened = pb.openedAt ? new Date(pb.openedAt) : null;
+      if (!opened || hoursSince(opened, ctx.now) < 5) return false;
+      if (state.lastInboundAt && new Date(state.lastInboundAt) > opened) return false; // they're talking to us already
+      return hoursSince(lastSent("plan_checkin"), ctx.now) >= 20;
+    },
+    template: () => NUDGES.plan_checkin,
   },
   {
     id: "follow_up",

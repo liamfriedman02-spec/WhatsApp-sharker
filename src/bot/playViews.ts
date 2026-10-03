@@ -1,5 +1,5 @@
 /**
- * Screens for the parts of the coach that lead: playbooks (launch sprint, campaigns),
+ * Screens for the parts of the coach that lead: playbooks (launch program, campaigns),
  * ready-to-send texts, marketing channels and the earnings math. Tone: the coach decides,
  * states the plan, and leaves the Boss one obvious tap.
  */
@@ -55,42 +55,196 @@ export function playbookMenu(ctx: ContentCtx, state: CoachState): OutboundMessag
   };
 }
 
-/** Today's step: the coach's brief, the mission, the ready texts, and the buttons. */
+/** Today's step: what the Boss learns today, what to do, the ready texts, and the buttons. */
 export function stepMessages(ctx: ContentCtx, opened: OpenedStep, coach: CoachView): OutboundMessage[] {
   const { playbook: pb, index, step, mission } = opened;
   const state = coach.state;
-  const day = `Day ${index + 1} of ${pb.steps.length}`;
-  const header = `${pb.emoji} *${pb.title}* · ${day}`;
+  const header = `${pb.emoji} *${pb.title}* · Day ${index + 1} of ${pb.steps.length}\n*${step.title}*`;
   if (mission.record.status === "done") {
-    return [
-      {
-        kind: "buttons",
-        body: `${header}\n\n✅ Today's step is done: *${mission.def.title}*. That's how it's done.\n\n${streakLine(coach)}\n\nTomorrow morning I bring day ${index + 2}. Want it now?`,
-        buttons: index + 1 < pb.steps.length ? [{ id: "play:next", title: "⏭️ Next day now" }, { id: "mission:bonus", title: "🎯 Bonus mission" }, MENU] : [{ id: "play:next", title: "🏁 Finish the plan" }, { id: "coach:progress", title: "🏆 My progress" }, MENU],
-      },
-    ];
+    return [stepDoneMessage(ctx, pb, index, coach)];
   }
-  const brief = step.brief(ctx, state);
+  const lesson = step.lesson?.(ctx, state);
+  const brief = step.brief(ctx, state).replace(/^Day \d+\.\s*/, "");
+  const small = step.small?.(ctx, state);
+  const waiting = opened.missed > 0 ? "👋 This step is still waiting from before. Let's finish it today.\n\n" : "";
+  const intro = [header, `${waiting}${lesson ? `💡 ${lesson}` : ""}`.trim(), brief].filter(Boolean).join("\n\n");
   const out: OutboundMessage[] = [];
   if (step.ask === "audience") {
-    out.push({ kind: "text", text: `${header}\n\n${brief}\n\n🎯 *Today:* ${mission.def.task}` });
+    out.push({ kind: "text", text: `${intro}\n\n🎯 *Today:* ${mission.def.task}` });
     out.push(audienceQuestion());
     return out;
   }
   const texts = (step.texts?.(ctx, state) ?? []).map((t) => withLink(t, ctx));
   out.push({
     kind: "text",
-    text: `${header}\n\n${brief}\n\n🎯 *Today:* ${mission.def.task}\n💡 ${mission.def.why}${texts.length ? "\n\n👇 Your texts are below. Forward them, then tap ✅ Done." : ""}`,
+    text:
+      `${intro}\n\n🎯 *Today:* ${mission.def.task}` +
+      (lesson ? "" : `\n💡 ${mission.def.why}`) +
+      (small ? `\n⏱️ Busy day? The 2-minute version counts too: ${small}.` : "") +
+      (texts.length ? "\n\n👇 Your texts are below. Forward them, then tap ✅ Done." : ""),
   });
   for (const t of texts) out.push({ kind: "text", text: t });
   const extra: Button =
     step.button?.(ctx, state) ?? (mission.def.guide ? { id: `guide:${mission.def.guide}`, title: "🧭 Guide me" } : { id: "texts:menu", title: "💌 Other texts" });
   out.push({
     kind: "buttons",
-    body: `${streakLine(coach)}\n\nDone with today's step? Tell me, or tap below.`,
-    buttons: [DONE, extra, { id: "play:next", title: "⏭️ Next day" }],
+    body: `${streakLine(coach)}\n\nDone? Tell me, or tap below. Stuck? Tell me that too, we'll solve it.`,
+    buttons: [DONE, extra, STUCK],
   });
   return out;
+}
+
+/** Today's plan step is done: celebrate, and say what tomorrow brings. */
+export function stepDoneMessage(ctx: ContentCtx, pb: Playbook, index: number, coach: CoachView, points?: number): OutboundMessage {
+  const next = pb.steps[index + 1];
+  const head = `✅ *Day ${index + 1} of ${pb.steps.length} done${points ? `! +${points} points` : "!"}*`;
+  const tomorrow = next
+    ? `Tomorrow I bring day ${index + 2}: *${next.title}*. Want it now?`
+    : `That was the last day. Tomorrow we look at what you built and set your goal for the month.`;
+  return {
+    kind: "buttons",
+    body: `${head}\n\n${streakLine(coach)}\n\n${tomorrow}`,
+    buttons: next
+      ? [{ id: "play:next", title: "⏭️ Next day now" }, { id: "coach:progress", title: "🏆 My progress" }, MENU]
+      : [{ id: "play:next", title: "🏁 Finish the plan" }, { id: "coach:progress", title: "🏆 My progress" }, MENU],
+  };
+}
+
+// ── Onboarding (day 0 of the launch program) ────────────────────────────────
+
+/** Who the coach is, how the money works, and the first of three questions. */
+export function onboardingMessages(ctx: ContentCtx, pb: Playbook): OutboundMessage[] {
+  const b = ctx.boss;
+  const earned = b.stats.earningsTotal > 0 ? `\n\nYou've already earned ${money(b.stats.earningsTotal, b.stats.currency)}. Now we grow it.` : "";
+  return [
+    {
+      kind: "text",
+      text:
+        `${pb.emoji} *Welcome to your launch program, ${b.firstName}!*\n\n` +
+        `For the next ${pb.steps.length} days I'm with you every day. Together we open your social pages, bring your first players and set up your earnings.\n\n` +
+        `💡 *First, how you make money:*\nPeople join *${b.brandName}* through your link. They play, and you earn from their activity. So the whole game is more players, playing more. Everything we do in these ${pb.steps.length} days serves that.${earned}`,
+    },
+    {
+      kind: "buttons",
+      body: `Three quick questions, so the plan fits you.\n\n*1 of 3:* How much time can you give *${b.brandName}* a day?`,
+      buttons: [
+        { id: "onb:time:10", title: "10 minutes" },
+        { id: "onb:time:30", title: "30 minutes" },
+        { id: "onb:time:60", title: "1 hour or more" },
+      ],
+    },
+  ];
+}
+
+export function onboardingSocialsQuestion(): OutboundMessage {
+  return {
+    kind: "list",
+    body: "*2 of 3:* Which social pages do you already have for your brand?",
+    footer: "Or just type it",
+    buttonLabel: "Pick one",
+    sections: [
+      {
+        title: "Your pages",
+        rows: [
+          { id: "onb:social:instagram", title: "📸 Instagram", description: "I have Instagram" },
+          { id: "onb:social:tiktok", title: "🎵 TikTok", description: "I have TikTok" },
+          { id: "onb:social:both", title: "📸🎵 Both", description: "Instagram and TikTok" },
+          { id: "onb:social:none", title: "🌱 None yet", description: "We'll open them together" },
+        ],
+      },
+    ],
+  };
+}
+
+export function onboardingHourQuestion(): OutboundMessage {
+  return {
+    kind: "buttons",
+    body: "*3 of 3:* When do you want me to bring you the day's step?",
+    buttons: [
+      { id: "onb:hour:9", title: "🌅 Morning" },
+      { id: "onb:hour:13", title: "☀️ Afternoon" },
+      { id: "onb:hour:18", title: "🌙 Evening" },
+    ],
+  };
+}
+
+const HOUR_NAMES: Record<number, string> = { 9: "morning", 13: "afternoon", 18: "evening" };
+
+/** The whole plan at a glance, right before day 1. */
+export function planOverviewMessage(pb: Playbook, state: CoachState): OutboundMessage {
+  const when = HOUR_NAMES[state.prefs.preferredHour ?? 9] ?? "day";
+  const minutes = state.prefs.minutesPerDay ?? 10;
+  const pace = minutes >= 30 ? "about 10 to 20 minutes" : "about 10 minutes";
+  const days = pb.steps.map((s, i) => `${i + 1}. ${s.title}`).join("\n");
+  return {
+    kind: "text",
+    text:
+      `✅ *Your plan is ready.*\n\nEvery ${when} I bring you one step, ${pace}:\n${days}\n\n` +
+      `Busy day? Every step has a 2-minute version. Stuck? Tap *I'm stuck* or just tell me, and we solve it together.\n\nDay 1 starts now 👇`,
+  };
+}
+
+// ── Stuck: the Boss says what's in the way ──────────────────────────────────
+
+const STUCK: Button = { id: "stuck:menu", title: "😕 I'm stuck" };
+
+export function stuckMenu(): OutboundMessage {
+  return {
+    kind: "list",
+    body: "No problem, that's what I'm here for. What's in the way? Pick one, or just tell me in your words.",
+    buttonLabel: "What's in the way",
+    sections: [
+      {
+        title: "What's in the way",
+        rows: [
+          { id: "stuck:time", title: "⏰ No time", description: "We make today's step a 2-minute thing" },
+          { id: "stuck:how", title: "🤔 Not sure how", description: "I walk you through it, one small step at a time" },
+          { id: "stuck:doubt", title: "💭 Does this work?", description: "I show you how the money works" },
+          { id: "stuck:skip", title: "⏭️ Skip this step", description: "Move on to the next day" },
+          { id: "handoff:start", title: "🙋 Talk to a person", description: "Someone from our team helps you" },
+        ],
+      },
+    ],
+  };
+}
+
+export function stuckTimeMessage(small: string): OutboundMessage {
+  return {
+    kind: "buttons",
+    body: `⏰ *Then we make it tiny.*\n\nForget the full step today. Just this: *${small}*.\n\nTwo minutes. Small steps every day beat big steps once a week.`,
+    buttons: [DONE, MENU],
+  };
+}
+
+export function stuckDoubtMessage(ctx: ContentCtx, coach: CoachView, small: string): OutboundMessage {
+  const b = ctx.boss;
+  const per = coach.insights.earningsPerActive;
+  const numbers =
+    per !== null
+      ? `Right now each active player brings you about ${money(per * 4.33, b.stats.currency)} a month.`
+      : b.stats.earningsTotal > 0
+        ? `You've already earned ${money(b.stats.earningsTotal, b.stats.currency)}.`
+        : "Your first active players will show you your own numbers.";
+  return {
+    kind: "buttons",
+    body:
+      `💭 *Fair question. Here's how it works.*\n\n1. People join *${b.brandName}* through your link.\n2. They play.\n3. You earn from their activity, every time they play.\n\n${numbers}\n\n` +
+      `The only way to see it for yourself is one small step: *${small}*.`,
+    buttons: [{ id: "play:today", title: "✅ Let's try" }, { id: "money:menu", title: "💰 Earnings math" }, { id: "handoff:start", title: "🙋 Talk to a person" }],
+  };
+}
+
+export function stuckHowMessage(): OutboundMessage {
+  return {
+    kind: "buttons",
+    body: "🤝 Here's exactly what to do. If something on your screen doesn't match, write me what you see, or talk to a person from our team.",
+    buttons: [DONE, { id: "handoff:start", title: "🙋 Talk to a person" }, MENU],
+  };
+}
+
+export function welcomeBackMessage(ctx: ContentCtx, pb: Playbook, index: number): OutboundMessage {
+  const step = pb.steps[index];
+  return { kind: "text", text: `🙌 *Welcome back, ${ctx.boss.firstName}!* I kept your place: day ${index + 1} of your ${pb.title.toLowerCase()}${step ? `, *${step.title}*` : ""}. Let's go.` };
 }
 
 export function playbookDoneMessage(ctx: ContentCtx, pb: Playbook, coach: CoachView): OutboundMessage {

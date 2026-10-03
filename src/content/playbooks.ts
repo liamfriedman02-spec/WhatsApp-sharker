@@ -1,7 +1,8 @@
 /**
- * Playbooks — multi-day plans the coach leads, one step per day, everything prepared:
- * the 7-day launch sprint (first players, first earnings) and short campaigns a Boss
- * runs when the moment is right (bring-a-friend week, comeback week, new-channel week).
+ * Playbooks: multi-day plans the coach leads, one step per day, everything prepared.
+ * The 10-day launch program teaches a new Boss how the money works, opens their social
+ * pages and brings their first players; short campaigns run when the moment is right
+ * (bring-a-friend week, comeback week, new-channel week).
  *
  * Each step names a mission (so ✅ Done, points, streaks and verification all work),
  * says what the coach says, and hands over the ready-to-send texts for the day.
@@ -12,6 +13,7 @@ import { nextChannel } from "./channels.js";
 import type { ContentCtx } from "./context.js";
 import { comebackText, followUpText, getAudience, referralText, welcomeText } from "./invites.js";
 import { fallbackPosts } from "./posts.js";
+import { money } from "../util/format.js";
 
 export type PlaybookId = "launch" | "friend_week" | "comeback_week" | "channel_week";
 
@@ -28,6 +30,10 @@ export interface PlaybookStep {
   ask?: "audience";
   /** Extra button for the day (a guide, the goal setter…). */
   button?: (ctx: ContentCtx, state: CoachState) => Button | null;
+  /** One thing the Boss learns today about how the money works (shown before the task). */
+  lesson?: (ctx: ContentCtx, state: CoachState) => string;
+  /** The 2-minute version, offered when the day is busy or the step stays undone (lowercase, single line). */
+  small?: (ctx: ContentCtx, state: CoachState) => string;
 }
 
 export interface Playbook {
@@ -59,6 +65,9 @@ const channelButton = (c: ContentCtx, s: CoachState): Button | null => {
   const ch = nextChannel(c, s);
   return ch?.guide ? { id: `guide:${ch.guide}`, title: `🧭 Open ${ch.name.split(" ")[0]}` } : null;
 };
+/** The Boss already runs this page (told us at the start, or the AI Agent posts there). */
+const hasSocial = (c: ContentCtx, s: CoachState, network: string) =>
+  c.boss.aiAgent.connectedSocials.includes(network) || s.prefs.socials.includes(network) || !!s.channels[network];
 const invitesFor = (c: ContentCtx, s: CoachState, fallback: string[]) => {
   const picked = s.audiences.map(getAudience).filter((a) => a !== undefined);
   return (picked.length ? picked : fallback.map(getAudience).filter((a) => a !== undefined)).slice(0, 2).map((a) => a.invite(c));
@@ -69,72 +78,117 @@ export const PLAYBOOKS: Playbook[] = [
     id: "launch",
     kind: "sprint",
     emoji: "🚀",
-    title: "7-day launch sprint",
-    description: "Your first players and your first earnings, 10 minutes a day",
+    title: "Launch program",
+    description: "10 days: learn how the money works, open your pages, first players",
     intro: (c) =>
-      `Here's how we get *${brand(c)}* its first players: 7 days, one step a day, 10 minutes each. I prepare every text, you press send. Day 1 starts now.`,
+      `Here's how we build *${brand(c)}* together: 10 days, one step a day, about 10 minutes each. Every day I teach you one thing about how the money works, I prepare the texts and the guides, and you press send. I'm with you every day.`,
     eligible: (c) => c.boss.brandLaunchedAt !== null && c.boss.stats.totalPlayers < 10 && launchedDays(c) <= 45,
     score: (c) => (c.boss.stats.totalPlayers < 10 ? 100 : 0),
     success: (c) =>
-      `🏁 *Sprint complete, ${first(c)}!* 7 days of real work on *${brand(c)}*. From here we keep the rhythm: one mission a day, and your goal for the month. I'm with you.`,
+      `🏁 *You did it, ${first(c)}!* 10 days of real work on *${brand(c)}*: your pages are open, your people know about you, and you know how the money works. From here we keep the rhythm: one mission a day, and your goal for the month. I'm still right here.`,
     steps: [
       {
-        title: "Your list of 20",
+        title: "Your first 5 players",
         mission: () => "invite_friends",
         ask: "audience",
-        brief: (c) =>
-          `Day 1. Your first players come from people who know you. Not from strangers. Tell me who's around you and I'll write each invite in your voice. Then you send it to 5 people today.`,
+        lesson: () => "You earn from your players' activity. Your first players are people who already trust you, so that's where we start.",
+        brief: () => "Day 1. Tell me who's around you and I'll write each invite in your voice. Then you send it to 5 people today.",
+        small: () => "send your invite to just one person you trust",
       },
       {
-        title: "Groups and status",
-        mission: () => "share_groups",
-        brief: () => "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts. Forward, post, done.",
-        texts: (c) => [getAudience("community")!.invite(c), fallbackPosts(c)[0]!],
+        title: "Your Instagram page",
+        mission: (c, s) => (hasSocial(c, s, "instagram") ? "bio_link" : "open_instagram"),
+        lesson: () => "Your Instagram page is your shop window. People look at it before they join. Your brand name, one clear line and your link turn a visit into a player.",
+        brief: (c, s) =>
+          hasSocial(c, s, "instagram")
+            ? "Day 2. You already have Instagram, great. Today we make it sell: your brand link in the bio and one line that says why people should join."
+            : "Day 2. Today we open your brand's Instagram. I'll walk you through it, step by step, in about 10 minutes.",
+        button: (c, s) => (hasSocial(c, s, "instagram") ? null : { id: "guide:open_instagram", title: "🧭 Open it with me" }),
+        small: (c, s) => (hasSocial(c, s, "instagram") ? "put your brand link in your bio, nothing else" : "create the account with your brand name, the rest can wait"),
       },
       {
         title: "Marketing on autopilot",
         mission: (c) => agentMission(c),
+        lesson: () => "Your AI Marketing Agent creates and publishes posts on your pages every day. You do the personal part, it does the public part, even while you sleep.",
         brief: (c) =>
           c.stage === "live"
             ? "Day 3. Your AI Agent is already posting for you. Today you multiply its reach."
-            : "Day 3. You've been doing the personal part. Now put the public part on autopilot: your AI Marketing Agent posts for your brand every day, even while you sleep.",
+            : c.stage === "needs_socials"
+              ? "Day 3. Your AI Agent is on. Connect your Instagram to it and it starts posting for you."
+              : "Day 3. Turn on your AI Marketing Agent and connect your Instagram. One minute each, and your marketing runs itself.",
         button: (c) => agentButton(c),
+        small: (c) => (c.stage === "not_activated" ? "just tap Activate on the AI Agent page" : "connect one account, that's all"),
       },
       {
-        title: "A new channel",
-        mission: (c, s) => (nextChannel(c, s) ? "open_channel" : "bio_link"),
-        brief: (c, s) => {
-          const ch = nextChannel(c, s);
-          return ch
-            ? `Day 4. Time for a new door into *${brand(c)}*: ${ch.emoji} ${ch.name}. ${ch.why} I'll walk you through it in 10 minutes.`
-            : `Day 4. Every channel you have should carry your link. Today: your bio, everywhere.`;
-        },
-        texts: (c) => [getAudience("online")!.invite(c)],
-        button: (c, s) => channelButton(c, s),
+        title: "Your TikTok page",
+        mission: (c, s) => (hasSocial(c, s, "tiktok") ? "first_video" : "open_tiktok"),
+        lesson: () => "TikTok shows your videos to people who don't know you yet. That's how you grow beyond the people around you.",
+        brief: (c, s) =>
+          hasSocial(c, s, "tiktok")
+            ? "Day 4. You already have TikTok. Today you use it: one short video about your brand."
+            : "Day 4. Today we open your brand's TikTok. Same as Instagram: your brand name, your link, done.",
+        button: (c, s) => (hasSocial(c, s, "tiktok") ? null : { id: "guide:open_tiktok", title: "🧭 Open it with me" }),
+        small: (c, s) => (hasSocial(c, s, "tiktok") ? "film one 10-second clip, you can post it tomorrow" : "create the account with your brand name"),
+      },
+      {
+        title: "Groups and status",
+        mission: () => "share_groups",
+        lesson: () => "Your WhatsApp status and your groups reach many people at once, and they already know your name.",
+        brief: () => "Day 5. Today we go wide: 3 groups where people know you, and your status. Here are your texts. Forward, post, done.",
+        texts: (c) => [getAudience("community")!.invite(c), fallbackPosts(c)[0]!],
+        small: () => "post your link on your WhatsApp status, 30 seconds",
+      },
+      {
+        title: "Your first video",
+        mission: () => "first_video",
+        lesson: () => "People join people. A short video with your face beats any perfect design.",
+        brief: () => "Day 6. Ten seconds, your face, your phone. Here's what to say, word for word.",
+        texts: (c) => [`Script: "Hi! I just launched my own brand, ${brand(c)}. I built it myself and I'd love you to join me. The link is in my bio!"`],
+        small: () => "post one story with your link instead",
       },
       {
         title: "Welcome and follow up",
         mission: (c) => (c.boss.stats.newPlayers7d > 0 ? "welcome_players" : "second_touch"),
+        lesson: () => "A sign-up isn't money yet. Money comes when players play. A personal welcome is the best start a player can get.",
         brief: (c) =>
           c.boss.stats.newPlayers7d > 0
-            ? `Day 5. ${c.boss.stats.newPlayers7d} people joined *${brand(c)}* this week. A welcome from you is what turns a sign-up into a player who plays. Then one friendly follow-up to the ones who didn't answer yet.`
-            : "Day 5. Most people join on the second message. Today you send a friendly follow-up to everyone who got your invite and didn't answer. No pressure, just a reminder.",
+            ? `Day 7. ${c.boss.stats.newPlayers7d} people joined *${brand(c)}* this week. Welcome each one personally, then send one friendly follow-up to the people who didn't answer yet.`
+            : "Day 7. Not everyone answers the first message. Today you send a friendly follow-up to everyone who got your invite. No pressure, just a reminder.",
         texts: (c) => [welcomeText(c), followUpText(c)],
+        small: () => "send the follow-up to one person",
       },
       {
         title: "Bring a friend",
         mission: (c) => (c.boss.stats.totalPlayers >= 1 ? "ask_referral" : "invite_friends"),
+        lesson: () => "Players bring players. An invite from a friend is the strongest invite there is.",
         brief: (c) =>
           c.boss.stats.totalPlayers >= 1
-            ? "Day 6. Your players know people like them. Today you ask 3 of them to bring one friend each. The cheapest new players you'll ever get."
-            : "Day 6. Five more personal invites today. Pick people you haven't written to yet.",
+            ? "Day 8. Your players know people like them. Today you ask 3 of them to bring one friend each."
+            : "Day 8. Five more personal invites today. Pick people you haven't written to yet.",
         texts: (c, s) => (c.boss.stats.totalPlayers >= 1 ? [referralText(c)] : invitesFor(c, s, ["friends"])),
+        small: () => "ask one player, or invite one more person",
+      },
+      {
+        title: "Get paid",
+        mission: (c) => (c.boss.payouts.methodConfigured ? "see_earnings" : "setup_payouts"),
+        lesson: (c) =>
+          c.boss.stats.earningsTotal > 0
+            ? `Your brand has earned ${money(c.boss.stats.earningsTotal, c.boss.stats.currency)} so far. Every time your players play, that number grows, and your payouts bring it to you.`
+            : "Every time your players play, you earn. Your payout method is where that money goes, so we set it up before the first earnings arrive.",
+        brief: (c) =>
+          c.boss.payouts.methodConfigured
+            ? "Day 9. Your payouts are set. Today open your earnings and see where your money comes from."
+            : "Day 9. Today we set up your payouts, once, so every earning can reach you.",
+        button: (c) => (c.boss.payouts.methodConfigured ? null : { id: "guide:setup_payouts", title: "🧭 Guide me" }),
+        small: () => "open Boss Hub, Earnings, and just look",
       },
       {
         title: "Your plan for the month",
         mission: () => "plan_month",
-        brief: (c) => `Day 7. Look at what you built this week. Now we turn it into a plan: your goal for the next 3 weeks, from *${brand(c)}*'s own numbers.`,
+        lesson: () => "Now you know how it works: more players, more activity, more earnings. A clear target tells us how many players to bring.",
+        brief: (c) => `Day 10. Look at what you built. Now we turn it into a plan: how much you want *${brand(c)}* to earn a month, and the players that takes.`,
         button: () => ({ id: "money:menu", title: "💰 Earnings math" }),
+        small: () => "tell me one number: how much you want to earn a month",
       },
     ],
   },

@@ -14,7 +14,7 @@
  */
 import { goalStatusLine, describeProposal, formatAmount } from "../coach/goals.js";
 import { formatChange } from "../coach/insights.js";
-import { lowerFirst, plannedMission, plannedProposal, plannedStep, stepMission } from "../coach/plan.js";
+import { lowerFirst, plannedMission, plannedProposal, plannedStep, smallStep, stepMission } from "../coach/plan.js";
 import { money, num, plural, networkName } from "../util/format.js";
 import type { ContentCtx } from "./context.js";
 import { levelName, nextLevelNeeds } from "./levels.js";
@@ -54,13 +54,17 @@ const MENU = { title: "🏠 Menu", payload: "menu:main" };
 const first = (c: ContentCtx) => c.boss.firstName;
 const brand = (c: ContentCtx) => c.boss.brandName;
 
-/** The plan step a proactive message talks about (the launch sprint's first day when there's no active plan). */
+/** The plan step a proactive message talks about (the launch program's first day when there's no active plan). */
 function stepFor(c: ContentCtx) {
   const planned = plannedStep(c);
-  if (planned && planned !== "finished") return { playbook: planned.playbook, index: planned.index, step: planned.step, mission: stepMission(c, planned) };
-  const playbook = getPlaybook(c.coach?.state.playbook?.id ?? "launch") ?? getPlaybook("launch")!;
-  const step = playbook.steps[0]!;
-  return { playbook, index: 0, step, mission: stepMission(c, { playbook, index: 0, step, opensNew: true }) };
+  const p =
+    planned && planned !== "finished"
+      ? planned
+      : (() => {
+          const playbook = getPlaybook(c.coach?.state.playbook?.id ?? "launch") ?? getPlaybook("launch")!;
+          return { playbook, index: 0, step: playbook.steps[0]!, opensNew: true, missed: 0 };
+        })();
+  return { ...p, mission: stepMission(c, p), small: smallStep(c, p), day: `${p.index + 1} of ${p.playbook.steps.length}` };
 }
 
 /** Short, param-safe description of the Agent's state for digests. */
@@ -362,20 +366,94 @@ export const NUDGES = {
     category: "MARKETING",
     body:
       "🚀 *{{1}}* · Day {{2}}\n\n" +
-      "{{3}}\n\n" +
+      "💡 {{3}}\n\n" +
       "🎯 *Today:* {{4}}\n\n" +
-      "Your texts for today are ready. Tap below and I hand them over.",
+      "Everything you need is ready. Tap below and let's do it.",
     params: (c) => {
       const s = stepFor(c);
-      return [s.playbook.title, `${s.index + 1} of ${s.playbook.steps.length}`, s.step.brief(c, c.coach!.state), s.mission.task];
+      return [s.playbook.title, s.day, s.step.lesson?.(c, c.coach!.state) ?? s.step.brief(c, c.coach!.state), s.mission.task];
     },
-    example: ["7-day launch sprint", "2 of 7", "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status.", "Send your brand link to 3 WhatsApp groups where people know you."],
+    example: ["Launch program", "2 of 10", "Your Instagram page is your shop window. People look at it before they join.", "Open an Instagram page for your brand, with your brand link in the bio."],
     cta: "hub_home",
     ctaFor: (c) => stepFor(c).mission.cta ?? "hub_home",
     sessionLinkInline: true,
     quickReplies: [
       { title: "🚀 Open today's step", payload: "play:today" },
       { title: "✅ Done", payload: "mission:done" },
+      { title: "😕 I'm stuck", payload: "stuck:menu" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  // The rescue ladder: a step that stays undone is reopened with a softer, smaller message.
+  playbook_retry: {
+    name: "boss_playbook_retry",
+    category: "MARKETING",
+    body:
+      "👋 *{{1}}, yesterday's step is still waiting*\n\n" +
+      "{{2}} · Day {{3}}: *{{4}}*\n\n" +
+      "Short on time today? The 2-minute version counts too: {{5}}.\n\n" +
+      "I'm right here if anything's unclear.",
+    params: (c) => {
+      const s = stepFor(c);
+      return [first(c), s.playbook.title, s.day, s.step.title, s.small];
+    },
+    example: ["Ana", "Launch program", "2 of 10", "Open your Instagram", "create the account with your brand name, the rest can wait"],
+    quickReplies: [
+      { title: "▶️ Let's do it", payload: "play:today" },
+      { title: "✅ Done", payload: "mission:done" },
+      { title: "😕 I'm stuck", payload: "stuck:menu" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  playbook_stuck: {
+    name: "boss_playbook_stuck",
+    category: "MARKETING",
+    body:
+      "🤝 *Let's figure it out together, {{1}}*\n\n" +
+      "Day {{2}} of your {{3}} is still open, and that's okay. Usually one small thing is in the way.\n\n" +
+      "What is it for you?",
+    params: (c) => {
+      const s = stepFor(c);
+      return [first(c), String(s.index + 1), lowerFirst(s.playbook.title)];
+    },
+    example: ["Ana", "2", "launch program"],
+    quickReplies: [
+      { title: "⏰ No time", payload: "stuck:time" },
+      { title: "🤔 Not sure how", payload: "stuck:how" },
+      { title: "💭 Does it work?", payload: "stuck:doubt" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  playbook_paused: {
+    name: "boss_playbook_paused",
+    category: "MARKETING",
+    body:
+      "💛 *I'm here when you're ready, {{1}}*\n\n" +
+      "I'll stop the daily steps for now so I don't flood you. *{{2}}* is waiting for you, right where you left it.\n\n" +
+      "Write me anything and we pick up together.",
+    params: (c) => [first(c), brand(c)],
+    example: ["Ana", "Ana Arena"],
+    quickReplies: [
+      { title: "▶️ Let's continue", payload: "play:today" },
+      { title: "🙋 Talk to a person", payload: "handoff:start" },
+    ],
+    footer: STOP_FOOTER,
+  },
+  plan_checkin: {
+    name: "boss_plan_checkin",
+    category: "MARKETING",
+    body:
+      "🌙 *Quick check, {{1}}*\n\n" +
+      "Did you get to today's step: *{{2}}*?\n\n" +
+      "Busy day? The 2-minute version counts too: {{3}}.",
+    params: (c) => {
+      const s = stepFor(c);
+      return [first(c), s.step.title, s.small];
+    },
+    example: ["Ana", "Open your Instagram", "create the account with your brand name, the rest can wait"],
+    quickReplies: [
+      { title: "✅ Done", payload: "mission:done" },
+      { title: "😕 I'm stuck", payload: "stuck:menu" },
     ],
     footer: STOP_FOOTER,
   },
@@ -390,7 +468,7 @@ export const NUDGES = {
       const pb = getPlaybook(c.coach?.state.playbook?.id ?? "launch") ?? getPlaybook("launch")!;
       return [pb.title, first(c), num(pb.steps.length), brand(c)];
     },
-    example: ["7-day launch sprint", "Ana", "7", "Ana Arena"],
+    example: ["Launch program", "Ana", "10", "Ana Arena"],
     quickReplies: [
       { title: "🎯 Set my goal", payload: "goal:new" },
       { title: "📣 Next campaign", payload: "play:menu" },

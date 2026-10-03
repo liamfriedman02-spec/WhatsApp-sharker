@@ -35,12 +35,16 @@ export function homeMessage(ctx: ContentCtx): OutboundMessage {
   const { boss, coach } = ctx;
   const state = coach?.state;
   const active = state?.playbook?.status === "active" ? getPlaybook(state.playbook.id) : undefined;
-  const proposed = coach && state && !active ? proposePlaybook(ctx, state) : null;
+  const proposed = coach && state && !active && state.playbook?.status !== "paused" ? proposePlaybook(ctx, state) : null;
   const streak = coach && coach.state.streak > 0 ? `\n🔥 ${plural(coach.state.streak, "mission", "missions")} in a row. Keep it going!` : "";
 
   let lead: string;
   let primary: Button;
-  if (active && state?.playbook) {
+  const paused = state?.playbook?.status === "paused" ? getPlaybook(state.playbook.id) : undefined;
+  if (paused && state?.playbook) {
+    lead = `${paused.emoji} Your ${paused.title.toLowerCase()} is waiting for you at day ${state.playbook.step + 1}: *${paused.steps[state.playbook.step]?.title ?? ""}*.\n👉 Ready to pick it up? I kept your place.`;
+    primary = { id: "play:today", title: "▶️ Let's continue" };
+  } else if (active && state?.playbook) {
     const step = active.steps[state.playbook.step];
     const done = coach?.todayMission?.record.status === "done";
     lead = `${active.emoji} ${active.title} · day ${state.playbook.step + 1} of ${active.steps.length}\n👉 ${done ? "Today's step is done ✅ Tomorrow I bring the next one." : `*${step?.title ?? "Today's step"}*. 10 minutes, everything's prepared.`}`;

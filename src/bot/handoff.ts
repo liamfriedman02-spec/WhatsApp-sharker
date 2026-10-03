@@ -5,7 +5,9 @@ import type { Handoff, MessageRecord } from "../store/store.js";
 export type SupportEvent =
   | { event: "handoff.opened"; handoff: Handoff; boss: BossSummary; message: string; transcript: MessageRecord[] }
   | { event: "handoff.message"; handoff: Handoff; boss: BossSummary; message: string }
-  | { event: "handoff.closed"; handoff: Handoff; boss: BossSummary; reason: "resolved_by_agent" | "closed_by_boss" | "expired" };
+  | { event: "handoff.closed"; handoff: Handoff; boss: BossSummary; reason: "resolved_by_agent" | "closed_by_boss" | "expired" }
+  /** A Boss went quiet in the middle of their plan: a person reaching out now can keep them. */
+  | { event: "boss.at_risk"; boss: BossSummary; reason: string };
 
 export interface BossSummary {
   id: string;
@@ -52,6 +54,6 @@ export class LogSupportDesk implements SupportDesk {
   constructor(private readonly logger: Logger) {}
   async notify(event: SupportEvent): Promise<void> {
     this.events.push(event);
-    this.logger.info("support desk event", { event: event.event, handoffId: event.handoff.id, bossId: event.boss.id });
+    this.logger.info("support desk event", { event: event.event, handoffId: "handoff" in event ? event.handoff.id : undefined, bossId: event.boss.id });
   }
 }

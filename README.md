@@ -11,7 +11,7 @@ coach, not an FAQ bot.
 | 🔔 **Retention** | Proactive messages driven by the Boss's actual activity: welcome, first player, first earnings, no players yet, inactive Boss, weekly coaching. |
 | 🤖 **Activation** | An AI Marketing Agent funnel (`not_activated` → `needs_socials` → `live`). Every message and CTA follows the Boss's stage, and a completed step is never asked for again. |
 | 🏆 **Coaching** | Daily missions with streaks and points, personal goals with pace tracking, levels, week-over-week insights, momentum alerts, a coach that remembers the Boss and checks back in, and ready-to-post content. |
-| 💰 **Earning, hand in hand** | The coach leads: a 7-day launch sprint to the first players and first earnings, campaigns (bring-a-friend, comeback, new-channel weeks), every invite and post written for the Boss, marketing channels opened one at a time, and earnings math that turns "I want $500 a month" into a number of players and a goal. Buttons under every message, and free text always works. |
+| 💰 **Earning, hand in hand** | The coach leads: a 10-day launch program that teaches how the money works, opens the Boss's social pages and brings the first players, with close accompaniment so nobody is lost, campaigns (bring-a-friend, comeback, new-channel weeks), every invite and post written for the Boss, marketing channels opened one at a time, and earnings math that turns "I want $500 a month" into a number of players and a goal. Buttons under every message, and free text always works. |
 
 Every message reinforces **your brand, your players, your earnings, your marketing, your business**, and
 points to the next step of the journey:
@@ -49,7 +49,8 @@ Requires Node ≥ 22.13 (it uses the built-in `node:sqlite`).
 | 🏆 **Levels** | 🌱 Starter → 🚀 Rising (Agent live + first player) → 🏗️ Builder (10 players + first earnings) → 💎 Pro (50 players, 20 active) → 👑 Elite (200 players, 75 active). The coach always says exactly what's missing for the next level. |
 | 💡 **Insights** | Week-over-week changes from daily snapshots, drops flagged early, and the value of inactive players estimated from the Boss's own numbers ("Each active player brought you about $5.10 this week. Bringing back 10 of your 128 inactive players could mean about +$51 a week"). |
 | 📈 **Momentum** | "🔥 Best day ever" celebrations, and one "Let's turn it around" alert when new players drop 30%+ (with the mission that fixes it). |
-| 🚀 **Launch sprint** | New Bosses get a 7-day plan, one 10-minute step a day, everything prepared: day 1 *who's around you?* → invites written per audience (family, friends, work, groups, followers; or whatever the Boss types), day 2 groups + status, day 3 the AI Agent, day 4 a new channel, day 5 welcome + follow-up texts, day 6 bring-a-friend, day 7 the review and a goal. Each morning the bot opens the next day (`playbook_step`); the step's mission is today's mission, so ✅ Done, points and streaks work as usual. |
+| 🚀 **Launch program** | New Bosses get 10 days, one step a day (about 10 minutes), led by the coach. It starts with a short chat: how the money works (players join through the link, they play, the Boss earns from their activity), then three questions (time per day, which social pages they already have, morning/afternoon/evening). Then the whole plan at a glance and day 1. The days: first 5 players (invites written per audience) → Instagram page → AI Agent on autopilot → TikTok page → groups + status → first video → welcome + follow-up → bring a friend → get paid (payouts) → the plan for the month. Every day teaches one lesson, hands over the texts or a step-by-step guide, and has a 2-minute version for busy days. Pages the Boss already has are not opened again: that day makes them sell instead. |
+| 🤝 **Close accompaniment** | The step comes at the hour the Boss chose; if it isn't done by the evening and the Boss hasn't written, one gentle check-in with the 2-minute version. An undone step is never skipped: the next day it comes back softer ("still waiting, here's the 2-minute version"), then "what's in the way?" (no time / not sure how / does it work?, each answered: a tiny step, a walk-through, the money explained with their numbers), and on the 4th quiet day the coach pauses the plan, says it's there when they're ready, and alerts the team (`boss.at_risk` on the support desk) so a person can reach out. Any message from the Boss picks the plan up where it stopped. "😕 I'm stuck" is on every step. |
 | 📣 **Campaigns** | Short plans the coach proposes when they fit: 🤝 bring-a-friend week (players ≥ 3), 🔁 comeback week (≥ 5 inactive players), 📣 new-channel week. Same engine as the sprint (`src/content/playbooks.ts`). While a plan runs, no other reminder asks for the Boss's time. |
 | 💌 **Texts** | Invites by audience, a welcome for new players, a bring-a-friend ask, a friendly follow-up and a comeback message, each as its own forwardable message with the brand link. Claude writes the invite in the Boss's voice when available. Naming an audience in free text ("my gym buddies") is enough. |
 | 📣 **Channels** | WhatsApp status → groups → Instagram → TikTok → Telegram channel → Facebook groups. The screen shows what's in use (🤖 = the AI Agent posts there), names the next channel, and opens it with a step-by-step guide. |
@@ -88,7 +89,7 @@ Proactive coaching follows the Boss to the app they used last.
 
 | Path | Responsibility |
 |---|---|
-| `src/content/` | **All copy**: lessons (`topics.ts`), FAQ (`faq.ts`), guides incl. channel guides (`guides.ts`), missions (`missions.ts`), the launch sprint and campaigns (`playbooks.ts`), invites and player texts (`invites.ts`), marketing channels (`channels.ts`), levels (`levels.ts`), proactive messages & WhatsApp templates (`nudges.ts`), Boss Hub links (`links.ts`), buttons the AI may attach (`quickButtons.ts`). |
+| `src/content/` | **All copy**: lessons (`topics.ts`), FAQ (`faq.ts`), guides incl. channel guides (`guides.ts`), missions (`missions.ts`), the launch program and campaigns (`playbooks.ts`), invites and player texts (`invites.ts`), marketing channels (`channels.ts`), levels (`levels.ts`), proactive messages & WhatsApp templates (`nudges.ts`), Boss Hub links (`links.ts`), buttons the AI may attach (`quickButtons.ts`). |
 | `src/coach/` | Coaching brain: `insights.ts` (trends, where the money is), `goals.ts` (proposal, pace), `money.ts` (target → players), `plan.ts` (today's step / mission), `service.ts` (state, missions, streaks, plans, memory, follow-ups). |
 | `src/bot/` | Conversation: `router.ts` (every inbound message), `views.ts` + `coachViews.ts` (screens), `intents.ts` (commands and keyword search), `handoff.ts` (human support). |
 | `src/ai/` | Claude coach and post writer. The knowledge base is built from `src/content`; Boss and coach data are added to each request. |
@@ -101,7 +102,7 @@ Proactive coaching follows the Boss to the app they used last.
 ### Conversation map
 
 `menu` → **Home**: "Here's the plan for *your brand* today" — the one thing to do, and three buttons: do it (today's step / start day 1 / today's mission), 📊 My business, ☰ More. `hi` is a conversation: with an AI key the coach answers like a person (home screen without one). **More** lists everything:
-- 🚀 **My plan today** (or the plan the coach would start now): the day's step of the launch sprint or campaign, with its texts
+- 🚀 **My plan today** (or the plan the coach would start now): the day's step of the launch program or campaign, with its lesson, texts and guide
 - 🎯 **Today's mission**: one action for today, with ✅ Done · Guide me · Another one
 - 🏆 **My goal & level**: level ladder, goal progress bar and pace, streak and points, top insight
 - 📊 **My business**: players, earnings, GCOIN and AI Agent, with week-over-week trends and the next step
@@ -128,7 +129,7 @@ whose replies always end with the buttons it picked.
 | **AI Agent: connect socials** | Stage `needs_socials` | 3 reminders (day 0, +2, +4) |
 | **AI Agent live** / first post | Stage just became `live` / first automatic posts | once each |
 | Coach check-in | A follow-up the coach scheduled in conversation is due | when due |
-| **Plan step** / plan complete | A new day of the Boss's sprint or campaign (opens the step, assigns its mission) / the morning after the last day | daily while the plan runs (outside the weekly budget; all other reminders pause) / once |
+| **Plan step** / evening check-in / plan complete | A new day of the Boss's plan at their chosen hour (opens the step, assigns its mission; an undone step comes back as "still waiting" → "what's in the way?" → pause + team alert) / the step isn't done by 18:00 and the Boss hasn't written / the day after the last step | daily while the plan runs (outside the weekly budget; all other reminders pause) / once a day at most / once |
 | No players | Launched ≥ 2 days, 0 players | 3 reminders |
 | Momentum drop | New players down 30%+ vs last week | once per drop |
 | Inactive Boss | No Boss Hub visit for 7+ days | 3 reminders |

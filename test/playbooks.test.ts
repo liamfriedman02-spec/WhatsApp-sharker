@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { NO_ACTIONS, type Assistant, type AssistantAnswer } from "../src/ai/assistant.js";
 import { moneyMath, parseAmount } from "../src/coach/money.js";
 import { matchAudiences } from "../src/content/invites.js";
+import { getMission } from "../src/content/missions.js";
 import { PLAYBOOKS } from "../src/content/playbooks.js";
+import type { LogSupportDesk } from "../src/bot/handoff.js";
 import { MONDAY_NOON, PHONES, harness, ids, textOf, type Harness } from "./helpers.js";
 
 const DAY = 86_400_000;
@@ -12,93 +14,212 @@ async function run(h: Harness, bossId: string) {
   return h.app.retention.runForBoss((await h.platform.getBoss(bossId))!);
 }
 
-describe("launch sprint", () => {
-  it("is offered to a new Boss, starts with 'who's around you', and writes the invites they describe", async () => {
+/** Starts the launch program and answers the three onboarding questions; returns the last replies (plan + day 1). */
+async function onboard(h: Harness, phone: string, answers: { time?: string; social?: string; hour?: string } = {}) {
+  await h.tap(phone, "play:start:launch");
+  await h.tap(phone, `onb:time:${answers.time ?? "10"}`);
+  await h.tap(phone, `onb:social:${answers.social ?? "none"}`);
+  return h.tap(phone, `onb:hour:${answers.hour ?? "9"}`);
+}
+
+describe("launch program", () => {
+  it("starts with a short chat: how the money works, three questions (typed or tapped), then the plan and day 1", async () => {
     const h = harness();
-    const [menu] = await h.text(PHONES.ana, "hi");
-    expect(ids(menu)[0]).toBe("play:start:launch");
-    expect(textOf(menu)).toContain("Here's the plan for *Ana Arena* today");
+    const [home] = await h.text(PHONES.ana, "hi");
+    expect(ids(home)[0]).toBe("play:start:launch");
+    expect(textOf(home)).toContain("Launch program");
 
     const [offer] = await h.text(PHONES.ana, "sprint");
-    expect(textOf(offer)).toContain("7-day launch sprint");
+    expect(textOf(offer)).toContain("Launch program");
     expect(ids(offer)).toEqual(["play:start:launch", "mission:today", "menu:main"]);
 
-    const started = await h.tap(PHONES.ana, "play:start:launch");
-    expect(textOf(started[0])).toContain("starts now");
-    expect(textOf(started[1])).toContain("Day 1 of 7");
-    expect(textOf(started[1])).toContain("Send a personal message with your brand link to 5 friends");
-    expect(ids(started[2])).toEqual(["invite:family", "invite:friends", "invite:work", "invite:community", "invite:online"]);
-    const state = await h.store.getCoachState("boss_ana");
-    expect(state.playbook).toMatchObject({ id: "launch", step: 0, stepDate: "2026-09-28", status: "active" });
-    expect((await h.store.getState("boss_ana", PHONES.ana)).flow).toEqual({ type: "ask", ask: "audience" });
+    const [welcome, q1] = await h.tap(PHONES.ana, "play:start:launch");
+    expect(textOf(welcome)).toContain("Welcome to your launch program, Ana!");
+    expect(textOf(welcome)).toContain("you earn from their activity");
+    expect(ids(q1)).toEqual(["onb:time:10", "onb:time:30", "onb:time:60"]);
+    expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ id: "launch", step: 0, status: "active", missed: 0 });
 
-    // Typed answer, no buttons: two audiences recognized → two invites, in the Boss's name, with the link placeholder.
+    const [q2] = await h.text(PHONES.ana, "half an hour"); // typed instead of tapped
+    expect(ids(q2)).toEqual(["onb:social:instagram", "onb:social:tiktok", "onb:social:both", "onb:social:none"]);
+    const [q3] = await h.text(PHONES.ana, "only insta");
+    expect(ids(q3)).toEqual(["onb:hour:9", "onb:hour:13", "onb:hour:18"]);
+    const [overview, day1, who] = await h.tap(PHONES.ana, "onb:hour:18");
+
+    const prefs = (await h.store.getCoachState("boss_ana")).prefs;
+    expect(prefs).toMatchObject({ minutesPerDay: 30, socials: ["instagram"], preferredHour: 18 });
+    expect(prefs.onboardedAt).toBe(h.now().toISOString());
+    expect(textOf(overview)).toContain("Every evening I bring you one step");
+    expect(textOf(overview)).toContain("1. Your first 5 players");
+    expect(textOf(overview)).toContain("10. Your plan for the month");
+    expect(textOf(day1)).toContain("Day 1 of 10");
+    expect(textOf(day1)).toContain("💡 You earn from your players' activity");
+    expect(ids(who)).toEqual(["invite:family", "invite:friends", "invite:work", "invite:community", "invite:online"]);
+
+    // Day 1 by typing: who's around → invites → "sent it" finishes the day and says what tomorrow brings.
     const invites = await h.text(PHONES.ana, "my football team and a few cousins");
-    expect(textOf(invites[0])).toContain("Your invites");
     expect(textOf(invites[1])).toContain("*Ana Arena*");
-    expect(textOf(invites[1])).toContain("[your brand link]");
-    expect(invites).toHaveLength(4); // intro, 2 invites, buttons
-    expect(ids(invites[3])).toEqual(["mission:done", "texts:menu", "menu:main"]);
-    expect((await h.store.getCoachState("boss_ana")).audiences).toEqual(["family", "community"]);
-
-    // "sent it" completes the day's mission without a tap.
     const [done] = await h.text(PHONES.ana, "sent it");
-    expect(textOf(done)).toContain("Mission complete!* +20 points");
-    const [today] = await h.tap(PHONES.ana, "play:today");
-    expect(textOf(today)).toContain("Today's step is done");
-    expect(ids(today)).toContain("play:next");
+    expect(textOf(done)).toContain("Day 1 of 10 done! +20 points");
+    expect(textOf(done)).toContain("Tomorrow I bring day 2: *Your Instagram page*");
+    expect(ids(done)).toEqual(["play:next", "coach:progress", "menu:main"]);
+
+    // Day 2 knows Ana already has Instagram: no "open it", make it sell.
+    const day2 = await h.tap(PHONES.ana, "play:next");
+    expect(textOf(day2[0])).toContain("You already have Instagram");
+    expect(textOf(day2[0])).toContain("Add your brand link to your Instagram and TikTok bio");
+    expect(ids(day2.at(-1))).toEqual(["mission:done", "texts:menu", "stuck:menu"]);
   });
 
-  it("brings the next day's step proactively, with the ready texts, and the Boss can skip ahead", async () => {
+  it("opens the social pages with the Boss, step by step, and teaches why", async () => {
+    const h = harness();
+    await onboard(h, PHONES.ana);
+    await h.tap(PHONES.ana, "invite:friends");
+    await h.tap(PHONES.ana, "mission:done");
+    const day2 = await h.tap(PHONES.ana, "play:next");
+    expect(textOf(day2[0])).toContain("*Your Instagram page*");
+    expect(textOf(day2[0])).toContain("💡 Your Instagram page is your shop window");
+    expect(textOf(day2[0])).toContain("Open an Instagram page for your brand");
+    expect(textOf(day2[0])).toContain("2-minute version counts too: create the account with your brand name");
+    expect(ids(day2.at(-1))).toEqual(["mission:done", "guide:open_instagram", "stuck:menu"]);
+
+    const [intro, step1] = await h.tap(PHONES.ana, "guide:open_instagram");
+    expect(textOf(intro)).toContain("open Instagram for your brand");
+    expect(textOf(step1)).toContain("(1/3)");
+    await h.tap(PHONES.ana, "guide_step:done");
+    await h.tap(PHONES.ana, "guide_step:done");
+    const out = await h.tap(PHONES.ana, "guide_step:done");
+    expect(out.map(textOf).join("\n")).toContain("Today's mission done too! +25 points");
+    expect((await h.store.getCoachState("boss_ana")).channels.instagram).toBeDefined();
+
+    const day4 = await h.tap(PHONES.ana, "play:next"); // day 3, the Agent
+    expect(textOf(day4[0])).toContain("Day 3 of 10");
+    expect(ids(day4.at(-1))).toEqual(["mission:done", "guide:activate_agent", "stuck:menu"]);
+  });
+
+  it("brings the next day at the Boss's hour, with the day's lesson", async () => {
     const h = harness();
     await h.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
-    await h.tap(PHONES.ana, "play:start:launch");
+    await onboard(h, PHONES.ana, { hour: "18" });
     await h.tap(PHONES.ana, "invite:friends");
     await h.tap(PHONES.ana, "mission:done");
 
-    h.advance(DAY); // Tuesday noon
+    h.advance(DAY); // Tuesday 12:00: too early for an evening Boss
+    expect((await run(h, "boss_ana")).candidates.map((c) => c.trigger)).not.toContain("playbook_step");
+    h.advance(6 * 3_600_000); // 18:00
     const d = await run(h, "boss_ana");
     expect(d.sent?.trigger).toBe("playbook_step");
     const tpl = h.messenger.to(PHONES.ana).at(-1);
+    expect(tpl?.kind === "template" && tpl.name).toBe("boss_playbook_step");
     expect(tpl?.kind === "template" && tpl.bodyParams).toEqual([
-      "7-day launch sprint",
-      "2 of 7",
-      "Day 2. Today we go wide: 3 groups where people know you, and your WhatsApp status. Here are your texts. Forward, post, done.",
-      "Send your brand link to 3 WhatsApp groups where people know you.",
+      "Launch program",
+      "2 of 10",
+      "Your Instagram page is your shop window. People look at it before they join. Your brand name, one clear line and your link turn a visit into a player.",
+      "Open an Instagram page for your brand, with your brand link in the bio.",
     ]);
-    expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ step: 1, stepDate: "2026-09-29" });
-    expect((await h.store.missionsSince("boss_ana", "2026-09-29")).map((m) => m.missionId)).toEqual(["share_groups"]);
-    expect((await run(h, "boss_ana")).candidates.map((c) => c.trigger)).not.toContain("playbook_step"); // once per day
-
-    const day2 = await h.tap(PHONES.ana, "play:today");
-    expect(textOf(day2[0])).toContain("Day 2 of 7");
-    expect(textOf(day2[1])).toContain("Hey everyone!"); // the groups invite (the Boss picked friends, so the default is used)
-    expect(textOf(day2[2])).toContain("*Ana Arena* is live!"); // status text
-    expect(ids(day2[3])).toEqual(["mission:done", "guide:share_link", "play:next"]);
-
-    const day3 = await h.tap(PHONES.ana, "play:next");
-    expect(textOf(day3[0])).toContain("Day 3 of 7");
-    expect(textOf(day3[0])).toContain("autopilot");
-    expect(ids(day3.at(-1))).toEqual(["mission:done", "guide:activate_agent", "play:next"]);
-    expect((await h.store.getCoachState("boss_ana")).playbook?.step).toBe(2);
+    expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ step: 1, stepDate: "2026-09-29", missed: 0 });
+    expect((await h.store.missionsSince("boss_ana", "2026-09-29")).map((m) => m.missionId)).toEqual(["open_instagram"]);
   });
 
-  it("ends with the review and a goal, and never double-books the day with a daily mission", async () => {
+  it("never skips an undone step: still waiting → what's in the way → pause and tell the team; a message brings it back", async () => {
+    const h = harness();
+    await h.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
+    await onboard(h, PHONES.ana); // and then goes quiet
+    const sentNames = async () => {
+      h.advance(DAY);
+      const d = await run(h, "boss_ana");
+      const last = h.messenger.to(PHONES.ana).at(-1);
+      return { trigger: d.sent?.trigger, name: last?.kind === "template" ? last.name : null, params: last?.kind === "template" ? last.bodyParams : [] };
+    };
+
+    const tue = await sentNames();
+    expect(tue).toMatchObject({ trigger: "playbook_step", name: "boss_playbook_retry" });
+    expect(tue.params).toEqual(["Ana", "Launch program", "1 of 10", "Your first 5 players", "send your invite to just one person you trust"]);
+    expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ step: 0, missed: 1, status: "active" });
+
+    expect(await sentNames()).toMatchObject({ trigger: "playbook_step", name: "boss_playbook_stuck" });
+    const desk = h.supportDesk as LogSupportDesk;
+    expect(desk.events).toEqual([]);
+
+    expect(await sentNames()).toMatchObject({ trigger: "playbook_step", name: "boss_playbook_paused" });
+    expect((await h.store.getCoachState("boss_ana")).playbook?.status).toBe("paused");
+    expect(desk.events).toEqual([expect.objectContaining({ event: "boss.at_risk", boss: expect.objectContaining({ id: "boss_ana" }) })]);
+    expect((desk.events[0] as { reason: string }).reason).toContain('day 1 of Launch program ("Your first 5 players")');
+
+    const fri = await sentNames();
+    expect(fri.trigger).not.toBe("playbook_step"); // paused: no more plan messages
+
+    // Ana writes again: welcome back, same place, ladder reset.
+    const [back, home] = await h.text(PHONES.ana, "hey");
+    expect(textOf(back)).toContain("Welcome back, Ana!");
+    expect(textOf(back)).toContain("day 1 of your launch program, *Your first 5 players*");
+    expect(ids(home)[0]).toBe("play:today");
+    expect((await h.store.getCoachState("boss_ana")).playbook).toMatchObject({ status: "active", missed: 0, step: 0 });
+  });
+
+  it("checks in once in the evening when the day's step isn't done, and not if the Boss wrote", async () => {
+    const h = harness();
+    await h.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
+    await onboard(h, PHONES.ana); // Monday 12:00
+    h.advance(6.5 * 3_600_000); // 18:30
+    const d = await run(h, "boss_ana");
+    expect(d.sent?.trigger).toBe("plan_checkin");
+    const msg = h.messenger.to(PHONES.ana).at(-1); // she wrote today, so it's the interactive version
+    expect(textOf(msg)).toContain("Quick check, Ana");
+    expect(textOf(msg)).toContain("Did you get to today's step: *Your first 5 players*?");
+    expect(textOf(msg)).toContain("The 2-minute version counts too: send your invite to just one person you trust.");
+    expect(ids(msg)).toEqual(["mission:done", "stuck:menu"]);
+    h.advance(3_600_000);
+    expect((await run(h, "boss_ana")).candidates.map((c) => c.trigger)).not.toContain("plan_checkin");
+
+    const quiet = harness();
+    await quiet.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
+    await onboard(quiet, PHONES.ana);
+    quiet.advance(3 * 3_600_000);
+    await quiet.text(PHONES.ana, "what is gcoin"); // talking to us already
+    quiet.advance(3.5 * 3_600_000);
+    expect((await run(quiet, "boss_ana")).candidates.map((c) => c.trigger)).not.toContain("plan_checkin");
+  });
+
+  it("'I'm stuck' finds what's in the way and makes the step easier", async () => {
+    const h = harness();
+    await onboard(h, PHONES.ana);
+    const [menu] = await h.tap(PHONES.ana, "stuck:menu");
+    expect(ids(menu)).toEqual(["stuck:time", "stuck:how", "stuck:doubt", "stuck:skip", "handoff:start"]);
+
+    const [tiny] = await h.tap(PHONES.ana, "stuck:time");
+    expect(textOf(tiny)).toContain("Just this: *send your invite to just one person you trust*");
+    expect((await h.store.getCoachState("boss_ana")).prefs.minutesPerDay).toBe(5);
+
+    const [doubt] = await h.tap(PHONES.ana, "stuck:doubt");
+    expect(textOf(doubt)).toContain("You earn from their activity, every time they play");
+    expect(textOf(doubt)).toContain("Your first active players will show you your own numbers");
+
+    const skipped = await h.tap(PHONES.ana, "stuck:skip");
+    expect(textOf(skipped[0])).toContain("Day 2 of 10");
+    const how = await h.tap(PHONES.ana, "stuck:how"); // day 2: opens Instagram together, step by step
+    expect(textOf(how[0])).toContain("we do it together");
+    expect(textOf(how[2])).toContain("(1/3)");
+  });
+
+  it("ends with the plan for the month, then celebrates the whole program", async () => {
     const h = harness();
     await h.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
     const state = await h.store.getCoachState("boss_ana");
-    await h.store.saveCoachState("boss_ana", { ...state, intensity: "intense", playbook: { id: "launch", step: 6, stepDate: "2026-09-28", startedAt: "", status: "active" } });
+    await h.store.saveCoachState("boss_ana", { ...state, intensity: "intense", playbook: { id: "launch", step: 9, stepDate: "2026-09-28", missed: 0, startedAt: "", status: "active" } });
 
-    const [day7] = await h.tap(PHONES.ana, "play:today");
-    expect(textOf(day7)).toContain("Day 7 of 7");
-    expect(textOf(day7)).toContain("your goal for the next 3 weeks");
+    const day10 = await h.tap(PHONES.ana, "play:today");
+    expect(textOf(day10[0])).toContain("Day 10 of 10");
+    expect(textOf(day10[0])).toContain("how much you want *Ana Arena* to earn a month");
+    expect(ids(day10.at(-1))).toEqual(["mission:done", "money:menu", "stuck:menu"]);
     expect((await run(h, "boss_ana")).candidates.map((c) => c.trigger)).not.toContain("daily_mission");
+    const [last] = await h.tap(PHONES.ana, "mission:done");
+    expect(textOf(last)).toContain("That was the last day");
 
     h.advance(DAY);
     const d = await run(h, "boss_ana");
     expect(d.sent?.trigger).toBe("playbook_done");
     const tpl = h.messenger.to(PHONES.ana).at(-1);
-    expect(tpl?.kind === "template" && tpl.bodyParams).toEqual(["7-day launch sprint", "Ana", "7", "Ana Arena"]);
+    expect(tpl?.kind === "template" && tpl.bodyParams).toEqual(["Launch program", "Ana", "10", "Ana Arena"]);
     const after = await h.store.getCoachState("boss_ana");
     expect(after.playbook?.status).toBe("done");
     expect(after.playbooksDone).toEqual(["launch"]);
@@ -112,7 +233,7 @@ describe("launch sprint", () => {
       const boss = (await h.platform.getBoss(id))!;
       const ctx = h.ctx(boss);
       const state = await h.store.getCoachState(id);
-      for (const pb of PLAYBOOKS) for (const step of pb.steps) expect(step.mission(ctx, state), `${pb.id}/${step.title}`).toMatch(/^[a-z_]+$/);
+      for (const pb of PLAYBOOKS) for (const step of pb.steps) expect(getMission(step.mission(ctx, state)), `${pb.id}/${step.title}`).toBeDefined();
     }
   });
 });
@@ -267,9 +388,9 @@ describe("hybrid replies", () => {
     expect(ids((await plain.text(PHONES.carla, "another idea"))[0])).toEqual(["play:today", "menu:main"]);
   });
 
-  it("the sprint's first day is answerable by typing or tapping", async () => {
+  it("the program's first day is answerable by typing or tapping", async () => {
     const h = harness();
-    await h.tap(PHONES.ana, "play:start:launch");
+    await onboard(h, PHONES.ana);
     const tapped = await h.tap(PHONES.ana, "invite:online");
     expect(textOf(tapped[1])).toContain("It's official 🎉 *Ana Arena* is live");
     expect((await h.store.getState("boss_ana", PHONES.ana)).flow).toBeNull(); // the tap answered the question
@@ -277,23 +398,31 @@ describe("hybrid replies", () => {
 });
 
 describe("retention with plans", () => {
-  it("the sprint's daily step doesn't count against the weekly reminder budget, but keeps the one-reminder-a-day rule", async () => {
+  it("a Boss who does every step gets one step a day, then the celebration, and nothing else asks for their time", async () => {
     const h = harness();
     await h.store.recordNudge({ bossId: "boss_ana", ...WELCOME_SENT });
-    await h.tap(PHONES.ana, "play:start:launch");
+    // Ana's Agent and payouts are set, so the checked steps (Agent, payouts) can be done.
+    h.platform.update("boss_ana", { aiAgent: { activated: true, connectedSocials: ["instagram"] }, payouts: { methodConfigured: true } });
+    await onboard(h, PHONES.ana);
+    await h.tap(PHONES.ana, "invite:friends");
+    await h.tap(PHONES.ana, "mission:done");
     const sent: string[] = [];
-    for (let i = 0; i < 7 * 24; i++) {
+    for (let i = 0; i < 11 * 24; i++) {
       h.advance(3_600_000);
       const d = await run(h, "boss_ana");
-      if (d.sent) sent.push(`${h.now().toISOString().slice(0, 10)} ${d.sent.trigger}`);
+      if (!d.sent) continue;
+      sent.push(`${h.now().toISOString().slice(0, 10)} ${d.sent.trigger}`);
+      if (d.sent.trigger === "playbook_step") await h.tap(PHONES.ana, "mission:done");
     }
-    const steps = sent.filter((s) => s.endsWith("playbook_step"));
-    expect(steps).toHaveLength(6); // days 2–7
-    expect(new Set(steps.map((s) => s.slice(0, 10))).size).toBe(6); // one per day
-    const doneAt = sent.findIndex((s) => s.endsWith("playbook_done"));
-    expect(doneAt).toBe(6); // the morning after day 7, right after the six steps
-    expect(sent.slice(0, doneAt)).toEqual(steps); // while the plan runs, nothing else asks for the Boss's time
-    expect(sent.slice(doneAt + 1).some((s) => s.endsWith("agent_activate"))).toBe(true); // regular coaching resumes afterwards
+    const reminders = sent.filter((s) => !/welcome|first_|agent_live|agent_first_post|level_up|best_day|goal_achieved/.test(s));
+    const steps = reminders.filter((s) => s.endsWith("playbook_step"));
+    expect(steps).toHaveLength(9); // days 2–10
+    expect(new Set(steps.map((s) => s.slice(0, 10))).size).toBe(9); // one per day
+    const doneAt = reminders.findIndex((s) => s.endsWith("playbook_done"));
+    expect(doneAt).toBe(9);
+    expect(reminders.slice(0, doneAt)).toEqual(steps); // no other reminder while the plan runs
+    expect(reminders.some((s) => s.endsWith("plan_checkin") || s.endsWith("playbook_retry"))).toBe(false);
+    expect((await h.store.getCoachState("boss_ana")).playbook?.status).toBe("done");
   });
 });
 

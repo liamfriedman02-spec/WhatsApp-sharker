@@ -1,12 +1,13 @@
 import type { Assistant, AssistantAnswer, CoachActions } from "../ai/assistant.js";
 import { formatAmount } from "../coach/goals.js";
-import type { CoachService, CoachView } from "../coach/service.js";
+import type { CoachService, CoachView, OpenedStep } from "../coach/service.js";
 import type { CoachIntensity } from "../coach/types.js";
 import { bossAddress, telegramAddress } from "../channels.js";
 import { personaId, type DemoPlatform } from "../platform/demoPlatform.js";
 import type { Config } from "../config.js";
 import { contentCtx, type ContentCtx } from "../content/context.js";
 import { moneyGoal, moneyMath, parseAmount } from "../coach/money.js";
+import { lowerFirst, plannedStep, smallStep } from "../coach/plan.js";
 import { getFaq, type FaqCategoryId, FAQ_CATEGORIES } from "../content/faq.js";
 import { getGuide, type Guide } from "../content/guides.js";
 import { getAudience, matchAudiences, type Audience } from "../content/invites.js";
@@ -47,9 +48,19 @@ import {
   playbookMenu,
   playbookOfferMessage,
   playbookStoppedMessage,
+  onboardingHourQuestion,
+  onboardingMessages,
+  onboardingSocialsQuestion,
+  planOverviewMessage,
   playerTextMessages,
+  stepDoneMessage,
   stepMessages,
+  stuckDoubtMessage,
+  stuckHowMessage,
+  stuckMenu,
+  stuckTimeMessage,
   textsMenu,
+  welcomeBackMessage,
   type Invite,
 } from "./playViews.js";
 import {
@@ -204,6 +215,8 @@ export class BotRouter {
 
   private async dispatch(t: Turn, msg: InboundMessage): Promise<void> {
     await this.expireStaleHandoff(t);
+    // The Boss is here: the plan's rescue ladder starts over.
+    await this.deps.coach.engaged(t.boss.id, t.coach);
 
     if (msg.type === "contact") return this.push(t, homeMessage(t.ctx)); // already linked
 
@@ -225,6 +238,11 @@ export class BotRouter {
 
     if (cmd === "stop") return this.setOptOut(t, true);
     if (cmd === "start") return this.setOptOut(t, false);
+    // Writing to the coach after a pause picks the plan up again.
+    if (t.coach.state.playbook?.status === "paused" && t.state.mode === "bot") {
+      const pb = await this.deps.coach.resumePlaybook(t.ctx, t.coach);
+      if (pb) this.push(t, welcomeBackMessage(t.ctx, pb, t.coach.state.playbook?.step ?? 0));
+    }
     if (cmd === "demo" && this.deps.demo) {
       t.state.flow = null;
       return this.push(t, demoMenu(this.deps.demo.personaOf(t.boss)?.title));
@@ -305,6 +323,10 @@ export class BotRouter {
         return this.onFollowUpReply(t, arg === "done");
       case "play":
         return this.onPlay(t, arg ?? "", extra);
+      case "onb":
+        return this.onOnboarding(t, arg ?? "", extra ?? "");
+      case "stuck":
+        return this.onStuck(t, arg ?? "");
       case "invite":
         return this.onInvite(t, arg ?? "");
       case "texts":
@@ -550,7 +572,7 @@ export class BotRouter {
     this.push(t, homeMessage(t.ctx));
   }
 
-  // ── Plans: launch sprint & campaigns ──────────────────────────────────────
+  // ── Plans: launch program & campaigns ──────────────────────────────────────
 
   /** Today's step of the active plan; otherwise the plan the coach would start now. */
   private async showPlan(t: Turn): Promise<void> {
@@ -569,11 +591,16 @@ export class BotRouter {
         const opened = pb ? await coach.startPlaybook(t.ctx, t.coach, pb.id) : null;
         if (!pb || !opened) return this.push(t, playbookMenu(t.ctx, t.coach.state));
         this.deps.logger.info("playbook started", { bossId: t.boss.id, playbook: pb.id });
+        // The launch program starts with a short chat: how the money works, then three questions.
+        if (pb.id === "launch" && !t.coach.state.prefs.onboardedAt) {
+          t.state.flow = { type: "ask", ask: "onb_time" };
+          return this.pushAll(t, onboardingMessages(t.ctx, pb));
+        }
         this.push(t, { kind: "text", text: `${pb.emoji} *${pb.title}* starts now. ${pb.steps.length} days. I lead, you send. Let's go.` });
-        if (opened.step.ask === "audience") t.state.flow = { type: "ask", ask: "audience" };
-        return this.pushAll(t, stepMessages(t.ctx, opened, t.coach));
+        return this.showStep(t, opened);
       }
       case "today":
+        if (t.coach.state.playbook?.status === "paused") return this.resumePlan(t);
         return this.openStep(t);
       case "next":
         return this.openStep(t, true);
@@ -586,11 +613,107 @@ export class BotRouter {
   }
 
   private async openStep(t: Turn, advance = false): Promise<void> {
-    const r = await this.deps.coach.openStep(t.ctx, t.coach, { advance });
-    if (r === null) return this.push(t, playbookMenu(t.ctx, t.coach.state));
+    const r = await this.deps.coach.openStep(t.ctx, t.coach, { advance, byBoss: true });
+    if (r === null || "paused" in r) return this.push(t, playbookMenu(t.ctx, t.coach.state));
     if ("finished" in r) return this.push(t, playbookDoneMessage(t.ctx, r.finished, t.coach));
+    return this.showStep(t, r);
+  }
+
+  private showStep(t: Turn, r: OpenedStep): void {
     if (r.step.ask === "audience" && r.mission.record.status !== "done") t.state.flow = { type: "ask", ask: "audience" };
     return this.pushAll(t, stepMessages(t.ctx, r, t.coach));
+  }
+
+  /** The Boss came back to a paused plan: pick up where they stopped, warmly. */
+  private async resumePlan(t: Turn): Promise<void> {
+    const pb = await this.deps.coach.resumePlaybook(t.ctx, t.coach);
+    if (!pb) return this.openStep(t);
+    this.push(t, welcomeBackMessage(t.ctx, pb, t.coach.state.playbook?.step ?? 0));
+    return this.openStep(t);
+  }
+
+  // ── Launch program onboarding: three questions, then the plan ─────────────
+
+  private async onOnboarding(t: Turn, question: string, value: string): Promise<void> {
+    const coach = this.deps.coach;
+    if (question === "time") {
+      await coach.setPrefs(t.boss.id, t.coach, { minutesPerDay: Number(value) || 10 });
+      t.state.flow = { type: "ask", ask: "onb_social" };
+      return this.push(t, onboardingSocialsQuestion());
+    }
+    if (question === "social") {
+      const socials = value === "both" ? ["instagram", "tiktok"] : value === "none" ? [] : [value].filter((v) => ["instagram", "tiktok", "facebook"].includes(v));
+      await coach.setPrefs(t.boss.id, t.coach, { socials });
+      for (const network of socials) await coach.markChannel(t.boss.id, t.coach, network, t.ctx.now);
+      t.state.flow = { type: "ask", ask: "onb_hour" };
+      return this.push(t, onboardingHourQuestion());
+    }
+    if (question === "hour") {
+      await coach.setPrefs(t.boss.id, t.coach, { preferredHour: [9, 13, 18].includes(Number(value)) ? Number(value) : 9, onboardedAt: t.ctx.now.toISOString() });
+      t.state.flow = null;
+      this.deps.logger.info("onboarding done", { bossId: t.boss.id, prefs: t.coach.state.prefs });
+      const pb = getPlaybook(t.coach.state.playbook?.id ?? "launch")!;
+      this.push(t, planOverviewMessage(pb, t.coach.state));
+      return this.openStep(t);
+    }
+    return this.openStep(t);
+  }
+
+  /** Free-text answers to the onboarding questions ("half an hour", "only insta", "evenings"). */
+  private onboardingAnswer(ask: "onb_time" | "onb_social" | "onb_hour", text: string): string {
+    const n = text.toLowerCase();
+    if (ask === "onb_time") {
+      if (/half|חצי|media|meia/.test(n)) return "30";
+      if (/hour|שעה|hora/.test(n)) return "60";
+      const minutes = parseAmount(n);
+      return minutes ? String(minutes >= 45 ? 60 : minutes >= 20 ? 30 : 10) : "10";
+    }
+    if (ask === "onb_social") {
+      const insta = /insta|אינסטגרם|אינסטה/.test(n);
+      const tiktok = /tik ?tok|טיקטוק/.test(n);
+      if (insta && tiktok) return "both";
+      if (insta) return "instagram";
+      if (tiktok) return "tiktok";
+      if (/facebook|פייסבוק/.test(n)) return "facebook";
+      return "none";
+    }
+    if (/even|night|ערב|לילה|noite|noche/.test(n)) return "18";
+    if (/after|noon|צהריים|tarde/.test(n)) return "13";
+    return "9";
+  }
+
+  // ── "I'm stuck": the Boss says what's in the way, the coach makes it easier ─
+
+  private async onStuck(t: Turn, reason: string): Promise<void> {
+    const coach = this.deps.coach;
+    await coach.engaged(t.boss.id, t.coach);
+    const withView = { ...t.ctx, coach: t.coach };
+    const planned = plannedStep(withView);
+    const small = planned && planned !== "finished" ? smallStep(withView, planned) : lowerFirst((await coach.ensureTodayMission(t.ctx, t.coach)).def.title);
+    this.deps.logger.info("boss stuck", { bossId: t.boss.id, reason });
+    switch (reason) {
+      case "time":
+        await coach.setPrefs(t.boss.id, t.coach, { minutesPerDay: 5 });
+        return this.push(t, stuckTimeMessage(small));
+      case "how": {
+        const r = await coach.openStep(t.ctx, t.coach, { byBoss: true });
+        const mission = r && "mission" in r ? r.mission : await coach.ensureTodayMission(t.ctx, t.coach);
+        const guide = r && "step" in r ? r.step.button?.(t.ctx, t.coach.state)?.id.replace(/^guide:/, "") : undefined;
+        const guideId = guide && getGuide(guide) ? guide : mission.def.guide;
+        if (guideId) {
+          this.push(t, { kind: "text", text: "🤝 No problem, we do it together. One small step at a time, right here." });
+          return this.startGuide(t, guideId);
+        }
+        if (r && "step" in r) this.pushAll(t, stepMessages(t.ctx, r, t.coach).slice(0, -1));
+        return this.push(t, stuckHowMessage());
+      }
+      case "doubt":
+        return this.push(t, stuckDoubtMessage(t.ctx, t.coach, small));
+      case "skip":
+        return this.openStep(t, true);
+      default:
+        return this.push(t, stuckMenu());
+    }
   }
 
   // ── Texts: invites, welcome, follow-ups ───────────────────────────────────
@@ -626,6 +749,9 @@ export class BotRouter {
   private async answerAsk(t: Turn, text: string): Promise<void> {
     const ask = t.state.flow?.type === "ask" ? t.state.flow.ask : null;
     t.state.flow = null;
+    if (ask === "onb_time" || ask === "onb_social" || ask === "onb_hour") {
+      return this.onOnboarding(t, ask.slice(4), this.onboardingAnswer(ask, text));
+    }
     if (ask === "audience") {
       const found = matchAudiences(text);
       if (found.length > 0) {
@@ -690,7 +816,11 @@ export class BotRouter {
         const r = await coach.completeMission(t.ctx, t.coach, m);
         if (r.status === "not_verified") return this.push(t, missionNotVerifiedMessage(m.def));
         this.deps.logger.info("mission completed", { bossId: t.boss.id, mission: m.def.id, streak: r.streak });
-        this.push(t, missionDoneMessage(r, t.coach));
+        // On a plan day, finishing the mission finishes the day: say what tomorrow brings.
+        const pb = t.coach.state.playbook;
+        const plan = pb?.status === "active" && pb.stepDate === t.coach.today ? getPlaybook(pb.id) : undefined;
+        if (plan && pb) this.push(t, stepDoneMessage(t.ctx, plan, pb.step, t.coach, r.points));
+        else this.push(t, missionDoneMessage(r, t.coach));
         return this.celebrateGoalIfReached(t);
       }
       case "skip": {

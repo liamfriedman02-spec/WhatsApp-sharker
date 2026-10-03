@@ -8,8 +8,8 @@ import type { Store } from "../store/store.js";
 import { DAY, HOUR, localTime } from "../util/time.js";
 import { adjustProposal, goalView, proposeGoal, startGoal, type GoalView } from "./goals.js";
 import { addDays, computeInsights, type Insights } from "./insights.js";
-import { plannedStep, stepMission } from "./plan.js";
-import type { CoachIntensity, CoachState, FollowUp, Goal, GoalMetric, GoalProposal, MissionRecord, StatSnapshot } from "./types.js";
+import { PAUSE_AFTER_MISSED, plannedStep, stepMission } from "./plan.js";
+import type { BossPrefs, CoachIntensity, CoachState, FollowUp, Goal, GoalMetric, GoalProposal, MissionRecord, StatSnapshot } from "./types.js";
 
 export interface ActiveMission {
   record: MissionRecord;
@@ -24,6 +24,8 @@ export interface OpenedStep {
   mission: ActiveMission;
   /** True when this call opened the step (a new day of the plan). */
   opened: boolean;
+  /** Mornings in a row this step has waited undone (0 = fresh). */
+  missed: number;
 }
 
 /** The coach's full picture of one Boss at one moment. */
@@ -120,8 +122,8 @@ export class CoachService {
   async ensureTodayMission(ctx: ContentCtx, view: CoachView): Promise<ActiveMission> {
     if (view.todayMission) return view.todayMission;
     if (view.state.playbook?.status === "active") {
-      const opened = await this.openStep(ctx, view);
-      if (opened && !("finished" in opened)) return opened.mission;
+      const opened = await this.openStep(ctx, view, { byBoss: true });
+      if (opened && "mission" in opened) return opened.mission;
     }
     return this.assignMission(ctx, view);
   }
@@ -155,47 +157,86 @@ export class CoachService {
     return { status: "done", points: mission.def.points, streak: view.state.streak, totalPoints: view.state.points };
   }
 
-  // ── Playbooks (launch sprint, campaigns) ──────────────────────────────────
+  // ── Playbooks (launch program, campaigns) ─────────────────────────────────
 
   /** Starts a plan today (replacing any active one) and opens its first step. */
   async startPlaybook(ctx: ContentCtx, view: CoachView, id: string): Promise<OpenedStep | null> {
     if (!getPlaybook(id)) return null;
     const s = view.state;
-    if (s.playbook?.status === "active" && s.playbook.id !== id && !s.playbooksDone.includes(s.playbook.id)) s.playbooksDone.push(s.playbook.id);
-    s.playbook = { id, step: 0, stepDate: view.today, startedAt: ctx.now.toISOString(), status: "active" };
+    if (s.playbook && s.playbook.id !== id && (s.playbook.status === "active" || s.playbook.status === "paused") && !s.playbooksDone.includes(s.playbook.id)) {
+      s.playbooksDone.push(s.playbook.id);
+    }
+    s.playbook = { id, step: 0, stepDate: view.today, openedAt: ctx.now.toISOString(), missed: 0, startedAt: ctx.now.toISOString(), status: "active" };
     s.playbooksDone = s.playbooksDone.filter((x) => x !== id);
     await this.save(ctx.boss.id, s);
     this.deps.logger.info("coach: playbook started", { bossId: ctx.boss.id, playbook: id });
-    const opened = await this.openStep(ctx, view);
-    return opened && !("finished" in opened) ? opened : null;
+    const opened = await this.openStep(ctx, view, { byBoss: true });
+    return opened && "mission" in opened ? opened : null;
   }
 
   /**
-   * Today's step of the active plan, opening it (and assigning its mission) when a new day
-   * started. `advance` moves on to the next step right away. Returns `{ finished }` when the
-   * plan is over (and marks it done), null without an active plan.
+   * Today's step of the active plan, (re)opening it and assigning its mission when a new day
+   * started. An undone step is reopened, never skipped: when the coach reopens it on its own
+   * (`byBoss` false, the morning message) the missed counter grows, and at PAUSE_AFTER_MISSED
+   * the plan pauses. When the Boss opens it, they're here: the counter resets.
+   * `advance` moves on to the next step right away (the Boss chose to).
    */
-  async openStep(ctx: ContentCtx, view: CoachView, opts: { advance?: boolean } = {}): Promise<OpenedStep | { finished: Playbook } | null> {
+  async openStep(
+    ctx: ContentCtx,
+    view: CoachView,
+    opts: { advance?: boolean; byBoss?: boolean } = {},
+  ): Promise<OpenedStep | { finished: Playbook } | { paused: Playbook } | null> {
     const withView: ContentCtx = { ...ctx, coach: view };
     let planned = plannedStep(withView);
     if (planned === null) return null;
     const playbook = planned === "finished" ? getPlaybook(view.state.playbook!.id)! : planned.playbook;
-    if (planned !== "finished" && opts.advance && !planned.opensNew) {
+    if (planned !== "finished" && opts.advance) {
       const next = planned.index + 1;
-      planned = next >= playbook.steps.length ? "finished" : { playbook, index: next, step: playbook.steps[next]!, opensNew: true };
+      planned = next >= playbook.steps.length ? "finished" : { playbook, index: next, step: playbook.steps[next]!, opensNew: true, missed: 0 };
     }
     if (planned === "finished") {
       await this.finishPlaybook(ctx.boss.id, view, "done");
       return { finished: playbook };
     }
-    if (planned.opensNew) {
-      view.state.playbook = { ...view.state.playbook!, step: planned.index, stepDate: view.today };
+    const missed = opts.byBoss ? 0 : planned.missed;
+    if (planned.opensNew || missed !== (view.state.playbook!.missed ?? 0)) {
+      const paused = !opts.byBoss && missed >= PAUSE_AFTER_MISSED;
+      view.state.playbook = {
+        ...view.state.playbook!,
+        step: planned.index,
+        stepDate: view.today,
+        openedAt: planned.opensNew ? ctx.now.toISOString() : view.state.playbook!.openedAt,
+        missed,
+        status: paused ? "paused" : "active",
+      };
       await this.save(ctx.boss.id, view.state);
+      if (paused) {
+        this.deps.logger.warn("coach: plan paused, Boss went quiet", { bossId: ctx.boss.id, playbook: playbook.id, step: planned.index });
+        return { paused: playbook };
+      }
     }
     const def = stepMission(withView, planned);
     const current = view.todayMission;
     const mission = current && current.def.id === def.id ? current : await this.assign(ctx, view, def);
-    return { playbook, index: planned.index, step: planned.step, mission, opened: planned.opensNew };
+    return { playbook, index: planned.index, step: planned.step, mission, opened: planned.opensNew, missed };
+  }
+
+  /** The Boss is back after a pause: the plan continues where it stopped, from today. */
+  async resumePlaybook(ctx: ContentCtx, view: CoachView): Promise<Playbook | null> {
+    const pb = view.state.playbook;
+    if (!pb || pb.status !== "paused") return null;
+    view.state.playbook = { ...pb, status: "active", stepDate: view.today, openedAt: ctx.now.toISOString(), missed: 0 };
+    await this.save(ctx.boss.id, view.state);
+    this.deps.logger.info("coach: plan resumed", { bossId: ctx.boss.id, playbook: pb.id });
+    return getPlaybook(pb.id) ?? null;
+  }
+
+  /** The Boss engaged with the plan (wrote, tapped): the rescue ladder starts over. */
+  async engaged(bossId: string, view: CoachView): Promise<void> {
+    const pb = view.state.playbook;
+    if (!pb || pb.status !== "active" || !pb.missed) return;
+    view.state.playbook = { ...pb, missed: 0 };
+    await this.save(bossId, view.state);
   }
 
   async finishPlaybook(bossId: string, view: CoachView, status: "done" | "stopped"): Promise<void> {
@@ -205,6 +246,11 @@ export class CoachService {
     if (!view.state.playbooksDone.includes(pb.id)) view.state.playbooksDone.push(pb.id);
     await this.save(bossId, view.state);
     this.deps.logger.info("coach: playbook finished", { bossId, playbook: pb.id, status });
+  }
+
+  async setPrefs(bossId: string, view: CoachView, patch: Partial<BossPrefs>): Promise<void> {
+    view.state.prefs = { ...view.state.prefs, ...patch };
+    await this.save(bossId, view.state);
   }
 
   async addAudiences(bossId: string, view: CoachView, ids: string[]): Promise<void> {

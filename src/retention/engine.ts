@@ -1,3 +1,4 @@
+import { bossSummary, type SupportDesk } from "../bot/handoff.js";
 import { bossAddress, channelOf } from "../channels.js";
 import { CoachService } from "../coach/service.js";
 import type { CoachIntensity } from "../coach/types.js";
@@ -43,6 +44,8 @@ export interface RetentionDeps {
   config: Config;
   logger: Logger;
   coach?: CoachService;
+  /** Told when a Boss goes quiet mid-plan, so a person can reach out. */
+  supportDesk?: SupportDesk;
   telegramEnabled?: boolean;
   now?: () => Date;
 }
@@ -56,7 +59,12 @@ const MIN_GAP_BETWEEN_REMINDERS_MS = 12 * HOUR;
 /** Reminders/summaries per rolling 7 days, by coaching intensity (celebrations and requested check-ins excluded). */
 const WEEKLY_REMINDER_CAP: Record<CoachIntensity, number> = { light: 2, standard: 4, intense: 7 };
 /** The Boss asked for these (check-ins, a plan they started), so they don't use the weekly budget. */
-const REQUESTED_TRIGGERS = new Set(["follow_up", "playbook_step"]);
+const REQUESTED_TRIGGERS = new Set(["follow_up", "playbook_step", "plan_checkin"]);
+/**
+ * A plan the Boss started is accompanied closely: its morning step and evening check-in may
+ * share a day (only the daily total, the 3h gap and "not mid-chat" apply).
+ */
+const PLAN_TRIGGERS = new Set(["playbook_step", "plan_checkin"]);
 /** Stay safely inside WhatsApp's 24h customer-service window for free-form messages. */
 const SESSION_WINDOW_MS = 24 * HOUR - 15 * 60_000;
 
@@ -113,8 +121,13 @@ export class RetentionEngine {
     const sent = { trigger: chosen.trigger.id, step: chosen.step, template: chosen.template.name, channel, via };
 
     if (opts.dryRun) return { ...decision, sent: { ...sent, messageId: null } };
+    const alert = chosen.trigger.alertTeam?.(input) ?? null;
     const messageId = await this.deliver(chosen, ctx, to, channel, now);
     await chosen.trigger.onSent?.(input, this.coach);
+    if (alert) {
+      this.deps.logger.warn("retention: Boss at risk, team alerted", { bossId: boss.id, reason: alert });
+      await this.deps.supportDesk?.notify({ event: "boss.at_risk", boss: bossSummary(boss), reason: alert });
+    }
     return { ...decision, sent: { ...sent, messageId } };
   }
 
@@ -244,6 +257,7 @@ export class RetentionEngine {
         reason = "conversation_active";
         continue;
       }
+      if (PLAN_TRIGGERS.has(c.trigger.id)) return c;
       // Reminders and summaries share one daily slot so the Boss never gets both on the same day.
       if (remindersToday >= r.maxRemindersPerDay || reminderTooSoon) continue;
       if (!REQUESTED_TRIGGERS.has(c.trigger.id) && weeklyReminders >= WEEKLY_REMINDER_CAP[intensity]) {

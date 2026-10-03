@@ -37,7 +37,7 @@ const COMMANDS: Record<Command, string[]> = {
   mission: ["mission", "my mission", "today's mission", "todays mission", "daily mission", "challenge", "what should i do today"],
   progress: ["progress", "my progress", "goal", "my goal", "level", "my level", "points", "streak", "coach"],
   post: ["post", "write a post", "write me a post", "caption", "post ideas"],
-  plan: ["sprint", "my sprint", "launch sprint", "start sprint", "plan", "my plan", "campaign", "campaigns", "my campaign", "playbook"],
+  plan: ["sprint", "my sprint", "launch sprint", "start sprint", "program", "my program", "launch program", "plan", "my plan", "campaign", "campaigns", "my campaign", "playbook"],
   texts: ["texts", "invite", "invites", "invitation", "invite text", "invite texts", "write an invite", "content", "my texts"],
   money: ["money", "earn", "earnings math", "how much", "how much can i earn", "calculator", "earnings calculator", "how much will i earn"],
   channels: ["channels", "my channels", "marketing channels", "open a channel", "new channel"],
