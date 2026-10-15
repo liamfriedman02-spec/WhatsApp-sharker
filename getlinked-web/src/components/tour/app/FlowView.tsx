@@ -115,7 +115,7 @@ function BucketPanel() {
         </span>
         <div>
           <div className="text-[9.5px] text-[var(--ui-faint)]">Bucket</div>
-          <div className="text-[12.5px] font-semibold tracking-[-0.01em]">DE · Forex · Tier 1</div>
+          <div className="text-[12.5px] font-semibold tracking-[-0.01em]">CA · Finance · Tier 1</div>
         </div>
         <span className="ml-auto text-right text-[9px] leading-tight text-[var(--ui-muted)]">
           Rotation
@@ -172,10 +172,10 @@ function BucketPanel() {
 }
 
 const NODE_META: Record<string, string> = {
-  A: 'Broker · DE, AT, CH',
-  B: 'Broker · DE, NL',
-  C: 'Broker · DE',
-  D: 'Broker · DE, AT',
+  A: 'Broker · CA, UK, IE',
+  B: 'Broker · CA, NO',
+  C: 'Broker · CA',
+  D: 'Broker · CA, IT',
 };
 
 function AdvertiserNode({ index }: { index: number }) {

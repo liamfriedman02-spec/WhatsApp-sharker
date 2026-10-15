@@ -85,9 +85,9 @@ export const LEAD = {
   id: 'GL-48213',
   fields: [
     { label: 'Affiliate', value: 'Affiliate #214' },
-    { label: 'Offer', value: 'Forex · EU Tier 1' },
-    { label: 'Country', value: 'Germany', chip: 'DE' },
-    { label: 'Language', value: 'German' },
+    { label: 'Offer', value: 'Finance · Tier 1' },
+    { label: 'Country', value: 'Canada', chip: 'CA' },
+    { label: 'Language', value: 'English' },
     { label: 'Device', value: 'Mobile · iOS' },
     { label: 'Sub ID', value: 'fb_cmp_17', mono: true },
     { label: 'Click ID', value: '9f3a71c2e04b', mono: true },
@@ -114,8 +114,8 @@ export const CHECKS = ['GEO', 'Schedule', 'Cap', 'Budget'] as const;
 
 export const LOG: { step: number; time: string; event: string; detail: string; tone: 'info' | 'skip' | 'ok' | 'money' }[] = [
   { step: 1, time: '14:09:22.104', event: 'click.tracked', detail: 'aff 214 · sub fb_cmp_17', tone: 'info' },
-  { step: 1, time: '14:09:22.109', event: 'lead.created', detail: 'GL-48213 · DE · mobile', tone: 'info' },
-  { step: 2, time: '14:09:22.118', event: 'bucket.matched', detail: 'DE · Forex · Tier 1', tone: 'info' },
+  { step: 1, time: '14:09:22.109', event: 'lead.created', detail: 'GL-48213 · CA · mobile', tone: 'info' },
+  { step: 2, time: '14:09:22.118', event: 'bucket.matched', detail: 'CA · Finance · Tier 1', tone: 'info' },
   { step: 2, time: '14:09:22.121', event: 'advertiser.skipped', detail: 'A · cap reached 50/50', tone: 'skip' },
   { step: 2, time: '14:09:22.124', event: 'advertiser.skipped', detail: 'B · budget unavailable', tone: 'skip' },
   { step: 2, time: '14:09:22.131', event: 'lead.routed', detail: 'C · priority 3', tone: 'ok' },
@@ -131,11 +131,11 @@ export const LOG: { step: number; time: string; event: string; detail: string; t
 ];
 
 export const LIVE_FEED = [
-  { geo: 'DE', vertical: 'Forex', to: 'Advertiser C', time: '14:09:22' },
+  { geo: 'CA', vertical: 'Finance', to: 'Advertiser C', time: '14:09:22' },
   { geo: 'UK', vertical: 'Crypto', to: 'Advertiser F', time: '14:09:19' },
-  { geo: 'IT', vertical: 'Forex', to: 'Advertiser A', time: '14:09:16' },
-  { geo: 'CA', vertical: 'iGaming', to: 'Advertiser K', time: '14:09:12' },
-  { geo: 'NO', vertical: 'Investing', to: 'Advertiser D', time: '14:09:09' },
+  { geo: 'IT', vertical: 'Investing', to: 'Advertiser A', time: '14:09:16' },
+  { geo: 'IE', vertical: 'iGaming', to: 'Advertiser K', time: '14:09:12' },
+  { geo: 'NO', vertical: 'Finance', to: 'Advertiser D', time: '14:09:09' },
   { geo: 'ES', vertical: 'iGaming', to: 'Advertiser H', time: '14:09:05' },
 ];
 

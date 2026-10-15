@@ -84,19 +84,19 @@ function CardTitle({ icon, title, aside }: { icon?: React.ReactNode; title: stri
 }
 
 const COUNTRY_LEADS = [
-  { label: 'Germany', value: 31, color: '#111827' },
-  { label: 'Italy', value: 24, color: '#2fa35b' },
-  { label: 'United Kingdom', value: 12, color: '#9ad5ae' },
-  { label: 'Canada', value: 9, color: '#5b3fd8' },
-  { label: 'Norway', value: 6, color: '#b8b0f0' },
-  { label: 'Others', value: 18, color: '#d6dae2' },
+  { label: 'Italy', value: 28, color: '#111827' },
+  { label: 'United Kingdom', value: 22, color: '#2fa35b' },
+  { label: 'Canada', value: 17, color: '#9ad5ae' },
+  { label: 'Norway', value: 9, color: '#5b3fd8' },
+  { label: 'Spain', value: 7, color: '#b8b0f0' },
+  { label: 'Others', value: 17, color: '#d6dae2' },
 ];
 const COUNTRY_CONV = [
-  { label: 'Germany', value: 36, color: '#111827' },
-  { label: 'Italy', value: 21, color: '#2fa35b' },
-  { label: 'Canada', value: 15, color: '#9ad5ae' },
-  { label: 'United Kingdom', value: 8, color: '#5b3fd8' },
-  { label: 'Norway', value: 5, color: '#b8b0f0' },
+  { label: 'Canada', value: 30, color: '#111827' },
+  { label: 'Italy', value: 24, color: '#2fa35b' },
+  { label: 'United Kingdom', value: 16, color: '#9ad5ae' },
+  { label: 'Norway', value: 9, color: '#5b3fd8' },
+  { label: 'Spain', value: 6, color: '#b8b0f0' },
   { label: 'Others', value: 15, color: '#d6dae2' },
 ];
 
@@ -136,9 +136,9 @@ const ADVERTISER_ROWS = [
 ];
 
 const PERFORMERS = [
-  { name: 'Forex EU Tier 1', clicks: '41,176', leads: '7,747', conv: '142', epc: '$1.16', profit: '$12,850.00' },
+  { name: 'Finance CA Tier 1', clicks: '41,176', leads: '7,747', conv: '142', epc: '$1.16', profit: '$12,850.00' },
   { name: 'Crypto UK Premium', clicks: '28,074', leads: '5,064', conv: '96', epc: '$0.98', profit: '$8,600.00' },
-  { name: 'iGaming CA Welcome', clicks: '19,142', leads: '3,399', conv: '61', epc: '$0.92', profit: '$5,400.00' },
+  { name: 'iGaming IT Welcome', clicks: '19,142', leads: '3,399', conv: '61', epc: '$0.92', profit: '$5,400.00' },
 ];
 
 /** The GetLinked dashboard, recreated with sample data. */
