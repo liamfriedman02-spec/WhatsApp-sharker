@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getlinked | Performance marketing and affiliate software</title>
+  <meta name="description" content="Getlinked is the performance marketing platform for affiliate networks and advertisers. Track every click, route every lead to the right buyer and pay every partner from one system.">
+  <meta property="og:title" content="Getlinked | Every click, routed and paid">
+  <meta property="og:description" content="Tracking, lead distribution, partners and payouts in one performance marketing platform.">
+  <meta name="theme-color" content="#e4e8e6">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js" } }
+  </script>
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
+  <div class="labels" aria-hidden="true">
+    <span class="tag" data-anchor="sources">Affiliates</span>
+    <span class="tag tag-hub" data-anchor="router">Getlinked</span>
+    <span class="tag" data-anchor="buyers">Advertisers</span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Getlinked home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <g fill="none" stroke-width="3.4" transform="rotate(-35 16 16)">
+          <rect x="2.5" y="10.5" width="16" height="11" rx="5.5" stroke="#10223a"/>
+          <rect x="13.5" y="10.5" width="16" height="11" rx="5.5" stroke="#2b44ff"/>
+        </g>
+      </svg>
+      <span>getlinked</span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#teams">Who it's for</a>
+    </nav>
+    <a class="btn btn-primary btn-small" href="https://getlinked.io/" data-demo>Book a demo</a>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" data-shot="hero">
+      <h1>Every click, routed and&nbsp;paid.</h1>
+      <p class="lede">Getlinked is the performance marketing platform for affiliate networks and advertisers. Track each click, send every lead to the right buyer and pay each partner, all from one system.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://getlinked.io/" data-demo>Book a demo</a>
+        <a class="btn btn-quiet" href="#how">Watch a lead travel</a>
+      </div>
+    </section>
+
+    <section class="how" id="how" aria-labelledby="how-title">
+      <h2 class="how-title" id="how-title">How a lead moves through Getlinked</h2>
+      <ol class="chapters">
+        <li class="chapter" data-shot="click">
+          <div class="card">
+            <span class="step" aria-hidden="true">1</span>
+            <h3>Track every click</h3>
+            <p>Every affiliate gets tracking links for each offer, with deep links to any landing page. Clicks are attributed the moment they happen, by server postback or pixel, and parallel tracking keeps redirects fast.</p>
+            <ul class="specs">
+              <li>Tracking links</li>
+              <li>Deep linking</li>
+              <li>Postbacks and pixels</li>
+              <li>Parallel tracking</li>
+              <li>API</li>
+            </ul>
+          </div>
+        </li>
+        <li class="chapter" data-shot="route">
+          <div class="card">
+            <span class="step" aria-hidden="true">2</span>
+            <h3>Send each lead to the right buyer</h3>
+            <p>Smart lead distribution rotates leads across your advertisers with the rules you set, by geo or niche. Caps and budgets enforce themselves. When a buyer hits today's cap, the next lead goes to the next buyer.</p>
+            <ul class="specs">
+              <li>Lead distribution</li>
+              <li>Advertiser rotation</li>
+              <li>Capping</li>
+              <li>Budget management</li>
+            </ul>
+            <p class="caption">In the model, the arm points at the advertiser getting the next lead. Each tower is as tall as its daily cap and turns grey when it's full.</p>
+          </div>
+        </li>
+        <li class="chapter" data-shot="convert">
+          <div class="card">
+            <span class="step" aria-hidden="true">3</span>
+            <h3>See every result as it lands</h3>
+            <p>Real-time reports show clicks, leads and conversions per affiliate, offer and advertiser. Run dynamic split tests, catch suspicious traffic with fraud detection, and set alerts so problems reach you first.</p>
+            <ul class="specs">
+              <li>Real-time reports</li>
+              <li>Dynamic split tests</li>
+              <li>Fraud detection</li>
+              <li>Alerts</li>
+            </ul>
+          </div>
+        </li>
+        <li class="chapter chapter-pay" data-shot="pay">
+          <div class="card">
+            <span class="step" aria-hidden="true">4</span>
+            <h3>Pay every partner on time</h3>
+            <p>Set different commissions per affiliate and per offer. Balances update on their own as conversions come in, billing and invoices run in the same system, and KYC checks are done before the first payout.</p>
+            <ul class="specs">
+              <li>Flexible commissions</li>
+              <li>Automated balances</li>
+              <li>Billing and invoices</li>
+              <li>KYC review</li>
+            </ul>
+            <p class="caption">Gold dots are payouts travelling back to the affiliate who sent the lead.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div class="solid">
+      <section class="features" id="features" data-shot="overview" aria-labelledby="features-title">
+        <div class="features-inner">
+          <div class="features-head">
+            <h2 id="features-title">Everything your network runs on</h2>
+            <p class="section-lede">Tracking, distribution, partners and payouts in one platform, so there's nothing to stitch together.</p>
+          </div>
+          <div class="groups">
+            <section class="group" aria-labelledby="g-tracking">
+              <h3 id="g-tracking"><span class="dot dot-lead" aria-hidden="true"></span>Tracking</h3>
+              <dl>
+                <dt>Tracking links</dt>
+                <dd>Unique links per affiliate and offer, with deep linking to any landing page.</dd>
+                <dt>Postbacks and pixels</dt>
+                <dd>Server-to-server postbacks or browser pixels, whichever your advertisers support.</dd>
+                <dt>Parallel tracking</dt>
+                <dd>Clicks are recorded without slowing the visitor's way to the landing page.</dd>
+                <dt>API</dt>
+                <dd>Push and pull leads, offers and stats from your own systems.</dd>
+              </dl>
+            </section>
+            <section class="group" aria-labelledby="g-distribution">
+              <h3 id="g-distribution"><span class="dot dot-lead" aria-hidden="true"></span>Distribution</h3>
+              <dl>
+                <dt>Smart lead distribution</dt>
+                <dd>Send each lead to the buyer that fits, by geo, niche or your own rules.</dd>
+                <dt>Advertiser rotation</dt>
+                <dd>Spread volume across buyers instead of flooding one.</dd>
+                <dt>Caps and budgets</dt>
+                <dd>Daily caps and advertiser budgets are enforced automatically.</dd>
+                <dt>Dynamic split tests</dt>
+                <dd>Split traffic between offers or landers and let the results decide.</dd>
+              </dl>
+            </section>
+            <section class="group" aria-labelledby="g-partners">
+              <h3 id="g-partners"><span class="dot dot-neutral" aria-hidden="true"></span>Partners</h3>
+              <dl>
+                <dt>Affiliate management</dt>
+                <dd>Onboard affiliates, agencies and influencers, and group them by geo or niche.</dd>
+                <dt>Offers and creatives</dt>
+                <dd>Offers in multiple languages, with creatives your partners can pick up.</dd>
+                <dt>In-app messaging</dt>
+                <dd>Support your partners from inside the platform.</dd>
+                <dt>KYC review</dt>
+                <dd>Collect and review partner documents before the first payout.</dd>
+              </dl>
+            </section>
+            <section class="group" aria-labelledby="g-money">
+              <h3 id="g-money"><span class="dot dot-pay" aria-hidden="true"></span>Money</h3>
+              <dl>
+                <dt>Flexible commissions</dt>
+                <dd>Different commissions per affiliate and per offer.</dd>
+                <dt>Automated balances</dt>
+                <dd>Affiliate balances update as conversions come in.</dd>
+                <dt>Billing and invoices</dt>
+                <dd>Invoice advertisers and settle with affiliates in one place.</dd>
+                <dt>Conversion guarantees</dt>
+                <dd>Agree guaranteed conversions with buyers and track delivery against them.</dd>
+              </dl>
+            </section>
+            <section class="group" aria-labelledby="g-control">
+              <h3 id="g-control"><span class="dot dot-neutral" aria-hidden="true"></span>Control</h3>
+              <dl>
+                <dt>Real-time reports</dt>
+                <dd>Clicks, leads and revenue as they happen.</dd>
+                <dt>Alerts</dt>
+                <dd>Get notified about the events you care about, like a cap filling up.</dd>
+                <dt>Fraud detection</dt>
+                <dd>Spot suspicious traffic before you pay for it.</dd>
+                <dt>Team permissions</dt>
+                <dd>Give each teammate access to exactly what they need.</dd>
+              </dl>
+            </section>
+            <section class="group" aria-labelledby="g-growth">
+              <h3 id="g-growth"><span class="dot dot-lead" aria-hidden="true"></span>Growth</h3>
+              <dl>
+                <dt>Remarketing tools</dt>
+                <dd>Get more from traffic you've already paid for.</dd>
+                <dt>Multiple traffic sources</dt>
+                <dd>Run many sources and many advertisers side by side.</dd>
+                <dt>Partnerships of every kind</dt>
+                <dd>Work with networks, advertisers, affiliates, agencies and influencers.</dd>
+              </dl>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="teams" id="teams" aria-labelledby="teams-title">
+        <div class="teams-inner">
+          <h2 id="teams-title">Made for the teams that move traffic</h2>
+          <div class="tablist" role="tablist" aria-label="Who Getlinked is for">
+            <button class="tab" role="tab" id="tab-networks" aria-controls="panel-networks" aria-selected="true">Networks</button>
+            <button class="tab" role="tab" id="tab-advertisers" aria-controls="panel-advertisers" aria-selected="false" tabindex="-1">Advertisers</button>
+            <button class="tab" role="tab" id="tab-startups" aria-controls="panel-startups" aria-selected="false" tabindex="-1">Startups</button>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panel-networks" aria-labelledby="tab-networks" tabindex="0">
+            <div>
+              <h3>Run your whole network from one place</h3>
+              <p>Manage affiliates and advertisers side by side, distribute leads with rules, enforce caps and budgets, and close the month with billing and balances already done.</p>
+            </div>
+            <ul class="uses">
+              <li>Affiliate and advertiser management</li>
+              <li>Smart lead distribution with capping</li>
+              <li>Advertiser budget management</li>
+              <li>Billing, balances and KYC</li>
+            </ul>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panel-advertisers" aria-labelledby="tab-advertisers" tabindex="0" hidden>
+            <div>
+              <h3>Run your own partner program</h3>
+              <p>Work with affiliates, agencies and influencers directly. Control every traffic source, rotate leads across your buyers and see the results in real time.</p>
+            </div>
+            <ul class="uses">
+              <li>Control over multiple traffic sources</li>
+              <li>Lead distribution with advertiser rotation</li>
+              <li>Real-time reports and statistics</li>
+              <li>Built-in remarketing tools</li>
+            </ul>
+          </div>
+
+          <div class="panel" role="tabpanel" id="panel-startups" aria-labelledby="tab-startups" tabindex="0" hidden>
+            <div>
+              <h3>Launch a partner program without building tracking</h3>
+              <p>Start with tracking, commissions and payouts already in place, then grow into a full network of partners as you scale.</p>
+            </div>
+            <ul class="uses">
+              <li>Tracking links and postbacks from day one</li>
+              <li>Flexible commissions per partner</li>
+              <li>Automated affiliate balances</li>
+              <li>Room to grow into a network</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="cta" id="demo" data-shot="cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Plug your traffic&nbsp;in.</h2>
+      <p class="lede">Bring your offers, partners and buyers. We'll walk you through Getlinked set up the way your network already works.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="https://getlinked.io/" data-demo>Book a demo</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand" href="#top" aria-label="Back to top">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <g fill="none" stroke-width="3.4" transform="rotate(-35 16 16)">
+          <rect x="2.5" y="10.5" width="16" height="11" rx="5.5" stroke="#10223a"/>
+          <rect x="13.5" y="10.5" width="16" height="11" rx="5.5" stroke="#2b44ff"/>
+        </g>
+      </svg>
+      <span>getlinked</span>
+    </a>
+    <p class="footer-note">Performance marketing and affiliate network software.</p>
+    <nav class="footer-nav" aria-label="Footer">
+      <a href="https://getlinked.io/getlinked-for-networks.php">For networks</a>
+      <a href="https://blog.getlinked.io/">Blog</a>
+      <a href="https://getlinked.io/" data-demo>Book a demo</a>
+    </nav>
+    <p class="copyright">© <span data-year>2026</span> Getlinked</p>
+  </footer>
+</body>
+</html>
