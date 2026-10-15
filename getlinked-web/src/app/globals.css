@@ -114,8 +114,12 @@
 .logo-mark {
   aspect-ratio: 548 / 153;
   background: currentColor;
-  -webkit-mask: var(--logo) no-repeat center / contain;
-  mask: var(--logo) no-repeat center / contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
 }
 
 /* Product screens on the light page. */
