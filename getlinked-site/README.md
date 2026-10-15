@@ -1,12 +1,13 @@
 # Getlinked 3D website
 
-A one-page marketing site for [Getlinked.io](https://getlinked.io/), built around a live 3D model of what the platform does:
+A one-page marketing site for [Getlinked.io](https://getlinked.io/), the lead distribution and affiliate platform for finance and iGaming. It's built around a live 3D model of what the platform does:
 
-- **Affiliates** (the posts on the left) send leads (cobalt dots) along their cables into the **Getlinked hub**.
-- The hub's arm rotates to the **advertiser** that gets the next lead. Each advertiser tower is as tall as its daily cap. It fills up as leads land, turns grey when the cap is reached, and the rotation skips it until the next "day".
-- Conversions send **payouts** (gold dots) back along the same cables to the affiliate who sent the lead.
+- **Affiliates** (the posts on the left) send leads (cobalt dots) along their cables into the **Getlinked hub**. Some leads are stopped at the hub as duplicates or fraud (grey dots).
+- The hub's arm rotates to the **broker or brand** that gets the next lead. Each buyer's tower is as tall as its daily cap. It fills up as leads land, turns grey when the cap is reached, and the rotation skips it until the next "day".
+- Leads that don't convert go back through the hub to a buyer that hasn't seen them yet (light blue dots).
+- Deposits send **payouts** (gold dots) back along the same cables to the affiliate who sent the lead.
 
-Scrolling moves the camera through the lead's journey: click, route, convert, pay. Each step's copy describes the matching Getlinked features.
+Scrolling moves the camera through the lead's journey in five steps: take in, route, redistribute, track deposits, pay. Each step's copy describes the matching Getlinked features.
 
 ## Files
 
@@ -39,7 +40,7 @@ Upload the folder to any static host: Netlify, Vercel, Cloudflare Pages, GitHub 
 
 - **Demo links.** Every "Book a demo" link has a `data-demo` attribute and points to `https://getlinked.io/`. Change the `href`s to your booking page or contact form.
 - **Logo.** The two-link mark and the "getlinked" wordmark are placeholders. Swap the inline SVGs in the header and footer, and `favicon.svg`, for the official logo.
-- **Copy.** The feature copy is based on Getlinked's public feature lists (tracking links, postbacks and pixels, parallel tracking, smart lead distribution, capping, budget management, flexible commissions, automated balances, billing, KYC, fraud detection, remarketing and more). Check that it matches the current product.
+- **Copy.** The feature copy describes a lead distribution platform for finance and iGaming: intake checks, routing rules, caps and working hours, redistribution, no-code broker integrations, autologin, deposit sync, player reports, CPA/CPL/RevShare/hybrid payouts, balances, billing and KYC. Remove anything Getlinked doesn't offer and add what makes it different. The site makes no claims about numbers, customers or competitors.
 - **Colors.** The palette is defined once at the top of `styles.css` (`--paper`, `--ink`, `--cobalt`, `--gold`) and mirrored in `COLOR` at the top of `main.js`. Change both together.
 
 ## Behavior notes

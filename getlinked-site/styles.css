@@ -7,6 +7,7 @@
   --cobalt: #2b44ff;
   --cobalt-deep: #1d31d6;
   --gold: #ffb800;
+  --resold: #8f9bff;
   --rule: rgba(16, 34, 58, 0.14);
   --on-ink: #f7f8f6;
   --on-ink-muted: rgba(247, 248, 246, 0.72);
@@ -101,7 +102,7 @@ a {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(90deg, var(--paper) 0%, rgba(228, 232, 230, 0.9) 30%, rgba(228, 232, 230, 0.55) 41%, var(--paper-clear) 54%);
+  background: linear-gradient(90deg, var(--paper) 0%, rgba(228, 232, 230, 0.92) 33%, rgba(228, 232, 230, 0.7) 43%, var(--paper-clear) 58%);
 }
 
 .labels {
@@ -395,6 +396,15 @@ main {
 .dot-pay {
   background: var(--gold);
   box-shadow: inset 0 0 0 1px rgba(16, 34, 58, 0.25);
+}
+
+.chapter-resell .specs li::before,
+.dot-resold {
+  background: var(--resold);
+}
+
+.chapter-resell .caption {
+  border-left-color: var(--resold);
 }
 
 .dot-neutral {

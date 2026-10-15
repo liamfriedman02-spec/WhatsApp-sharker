@@ -7,6 +7,8 @@ const COLOR = {
   cable: 0xc4ccc9,
   cobalt: 0x2b44ff,
   gold: 0xffb800,
+  resold: 0x8f9bff,
+  blocked: 0x7f8a87,
   ink: 0x10223a,
   off: 0xb3bcb9,
 };
@@ -110,6 +112,8 @@ function startScene(renderer) {
   const cobaltFlat = new THREE.MeshBasicMaterial({ color: COLOR.cobalt });
   const cLead = new THREE.Color(COLOR.cobalt);
   const cPay = new THREE.Color(COLOR.gold);
+  const cResold = new THREE.Color(COLOR.resold);
+  const cBlocked = new THREE.Color(COLOR.blocked);
   const cInk = new THREE.Color(COLOR.ink);
   const cOff = new THREE.Color(COLOR.off);
 
@@ -239,8 +243,9 @@ function startScene(renderer) {
   dots.count = 0;
   world.add(dots);
 
-  const LEAD = 0;
-  const PAYOUT = 1;
+  const LEAD = 0; // a lead coming in, going out to a buyer, or heading back to be redistributed
+  const PAYOUT = 1; // a deposit reported back, paying the affiliate who sent the lead
+  const BLOCKED = 2; // a duplicate or fraudulent lead stopped at the hub
   const DAY = 22; // seconds of simulation per "day" of caps
   const particles = [];
   let dayClock = 0;
@@ -249,49 +254,78 @@ function startScene(renderer) {
   let armTarget = armAngle;
 
   // Weights per camera shot, filled in by the scroll rig. Used to tune the simulation and labels.
-  const weight = { hero: 1, click: 0, route: 0, convert: 0, pay: 0, overview: 0, cta: 0 };
+  const weight = { hero: 1, click: 0, route: 0, resell: 0, convert: 0, pay: 0, overview: 0, cta: 0 };
 
-  const nextAdvertiser = () => {
+  // Next buyer in rotation that has room under its cap and hasn't already had this lead.
+  const nextAdvertiser = (tried) => {
     for (let k = 1; k <= advertisers.length; k++) {
       const j = (rotation + k) % advertisers.length;
       const a = advertisers[j];
-      if (!a.full && !a.draining) { rotation = j; return j; }
+      if (!a.full && !a.draining && !tried.includes(j)) { rotation = j; return j; }
     }
     return -1;
   };
 
   const spawnLead = (s) => {
     if (particles.length >= MAX_DOTS) return;
-    particles.push({ kind: LEAD, src: s, adv: -1, legs: [[sources[s].curve, false]], leg: 0, t: 0, wait: 0, speed: 3.3 });
+    particles.push({
+      kind: LEAD, phase: 'in', src: s, adv: -1, tried: [], resold: false,
+      legs: [[sources[s].curve, false]], leg: 0, t: 0, wait: 0, speed: 3.3,
+    });
     sources[s].bump = 1;
+  };
+
+  const sendToBuyer = (p) => {
+    const j = nextAdvertiser(p.tried);
+    if (j < 0) return false; // every buyer that could take it is capped for today
+    p.adv = j;
+    p.tried.push(j);
+    p.phase = 'out';
+    p.legs = [[advertisers[j].curve, false]];
+    p.leg = 0;
+    p.t = 0;
+    p.wait = 0.14;
+    p.speed = 4.4;
+    armTarget = advertisers[j].angle;
+    return true;
   };
 
   // Returns false when the particle is done and should be removed.
   const finishLeg = (p) => {
-    if (p.kind === LEAD && p.adv < 0) {
-      const j = nextAdvertiser();
-      if (j < 0) return false; // every buyer is capped for today
-      p.adv = j;
-      p.legs = [[advertisers[j].curve, false]];
-      p.leg = 0;
-      p.t = 0;
-      p.wait = 0.14;
-      p.speed = 4.4;
-      armTarget = advertisers[j].angle;
-      return true;
+    if (p.kind === LEAD && p.phase === 'in') {
+      if (Math.random() < 0.07 + 0.2 * weight.click) {
+        p.kind = BLOCKED;
+        p.fade = 1;
+        return true;
+      }
+      return sendToBuyer(p);
     }
+    if (p.kind === LEAD && p.phase === 'back') return sendToBuyer(p);
     if (p.kind === LEAD) {
       const a = advertisers[p.adv];
       a.level = Math.min(a.cap, a.level + 1);
       a.pulse = 1;
       if (a.level >= a.cap) a.full = true;
-      const convertChance = 0.42 + 0.45 * weight.pay;
-      if (Math.random() < convertChance && particles.length < MAX_DOTS) {
-        particles.push({
-          kind: PAYOUT, src: p.src, adv: p.adv,
-          legs: [[a.curve, true], [sources[p.src].curve, true]],
-          leg: 0, t: 0, wait: 0.5 + Math.random() * 0.9, speed: 4.8,
-        });
+      if (Math.random() < 0.32 + 0.45 * weight.pay) {
+        if (particles.length < MAX_DOTS) {
+          particles.push({
+            kind: PAYOUT, src: p.src,
+            legs: [[a.curve, true], [sources[p.src].curve, true]],
+            leg: 0, t: 0, wait: 0.5 + Math.random() * 0.9, speed: 4.8,
+          });
+        }
+        return false;
+      }
+      // No deposit: send the lead back through the hub to a buyer that hasn't seen it.
+      if (p.tried.length < 3 && Math.random() < 0.45 + 0.45 * weight.resell) {
+        p.phase = 'back';
+        p.resold = true;
+        p.legs = [[a.curve, true]];
+        p.leg = 0;
+        p.t = 0;
+        p.wait = 0.7 + Math.random() * 0.8;
+        p.speed = 4.4;
+        return true;
       }
       return false;
     }
@@ -327,6 +361,11 @@ function startScene(renderer) {
 
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
+      if (p.kind === BLOCKED) {
+        p.fade -= dt * 1.2;
+        if (p.fade <= 0) particles.splice(i, 1);
+        continue;
+      }
       if (p.wait > 0) { p.wait -= dt; continue; }
       const curve = p.legs[p.leg][0];
       p.t += (p.speed * dt) / curveLength.get(curve);
@@ -336,9 +375,8 @@ function startScene(renderer) {
 
   const tmpPos = new THREE.Vector3();
   const tmpMat = new THREE.Matrix4();
+  const tmpScale = new THREE.Vector3();
   const noRotation = new THREE.Quaternion();
-  const leadScale = new THREE.Vector3(1, 1, 1);
-  const payScale = new THREE.Vector3(1.15, 1.15, 1.15);
 
   const updateModel = (dt) => {
     for (const s of sources) {
@@ -374,13 +412,23 @@ function startScene(renderer) {
 
     let n = 0;
     for (const p of particles) {
-      if (p.wait > 0) continue;
+      if (p.wait > 0 && p.kind !== BLOCKED) continue;
       const [curve, reverse] = p.legs[p.leg];
       const t = Math.min(1, p.t);
       curve.getPointAt(reverse ? 1 - t : t, tmpPos);
-      tmpMat.compose(tmpPos, noRotation, p.kind === PAYOUT ? payScale : leadScale);
+      let color = p.resold ? cResold : cLead;
+      let size = 1;
+      if (p.kind === PAYOUT) {
+        color = cPay;
+        size = 1.15;
+      } else if (p.kind === BLOCKED) {
+        color = cBlocked;
+        size = Math.max(0.001, p.fade) * 1.35;
+        tmpPos.y -= (1 - p.fade) * 0.3;
+      }
+      tmpMat.compose(tmpPos, noRotation, tmpScale.setScalar(size));
       dots.setMatrixAt(n, tmpMat);
-      dots.setColorAt(n, p.kind === PAYOUT ? cPay : cLead);
+      dots.setColorAt(n, color);
       n++;
     }
     dots.count = n;
@@ -394,8 +442,9 @@ function startScene(renderer) {
   const SHOTS = {
     wide: {
       hero: [[1.8, 12.5, 21], [0.6, 0.5, 0.6]],
-      click: [[-13.5, 5.2, 8.5], [-6.2, 0.6, 0.4]],
+      click: [[-11, 6.5, 11.5], [-3.2, 0.5, 0.3]],
       route: [[3.2, 20.5, 12.5], [3.5, 0.9, 0.3]],
+      resell: [[11.5, 13.5, 15.5], [4.2, 1.4, 0]],
       convert: [[12, 7, 14], [5.6, 1.7, 0]],
       pay: [[-0.6, 22, 10], [-0.3, 0, 0.3]],
       overview: [[-0.6, 22, 10], [-0.3, 0, 0.3]],
@@ -405,6 +454,7 @@ function startScene(renderer) {
       hero: [[0, 20, 31], [0, 1, -1.4]],
       click: [[0, 10, 23.5], [0, 0.6, 5.6]],
       route: [[0, 28.5, 8], [0, 0.8, -3.4]],
+      resell: [[0, 21, 14], [0, 1.2, -3.2]],
       convert: [[2, 10, 21], [0, 1.8, -5.4]],
       pay: [[0, 24, 17], [0, 0, 6.5]],
       overview: [[0, 24, 17], [0, 0, 6.5]],
@@ -516,7 +566,7 @@ function startScene(renderer) {
   };
 
   const updateLabels = () => {
-    const closeUp = weight.route + weight.convert;
+    const closeUp = weight.route + weight.resell + weight.convert;
     for (const tag of tags) {
       const shown = tag.shots.reduce((sum, name) => sum + weight[name], 0);
       place(tag.el, tag.at, THREE.MathUtils.clamp(shown * 2 - 1, 0, 1));
