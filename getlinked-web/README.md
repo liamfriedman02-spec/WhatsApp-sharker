@@ -67,5 +67,5 @@ npm run export:preview   # writes ./out
 
 - **Demo links:** "Book a Demo" links point to `https://getlinked.io/` until the demo form section exists (`DEMO_URL` in `SystemTour.tsx`, plus the navbar).
 - **Nav links:** Solutions, Finance, iGaming and Resources point to sections that aren't built yet.
-- **Logo:** the logo is a placeholder mark. Swap in the official one in `Logo.tsx` and `src/app/icon.svg`.
+- **Logo:** `src/components/site/getlinked-logo.svg` and the "g" tab icon (`src/app/icon.svg`) are traced from a JPG of the logo. Replace them with the original vector files when available for perfectly clean edges.
 - **Lead Recycling:** check the recycling rule wording (trigger, skip rule, cycle limit) against how the product works.

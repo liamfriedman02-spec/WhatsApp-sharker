@@ -105,12 +105,12 @@
   perspective-origin: 68% 45%;
 }
 
-.tour-stage[data-orient='row'] {
+.tour[data-orient='row'] .tour-stage {
   -webkit-mask-image: linear-gradient(90deg, transparent var(--fade-a), #000 var(--fade-b));
   mask-image: linear-gradient(90deg, transparent var(--fade-a), #000 var(--fade-b));
 }
 
-.tour-stage[data-orient='column'] {
+.tour[data-orient='column'] .tour-stage {
   -webkit-mask-image: linear-gradient(180deg, #000 var(--fade-a), transparent var(--fade-b));
   mask-image: linear-gradient(180deg, #000 var(--fade-a), transparent var(--fade-b));
 }
@@ -316,4 +316,264 @@ html.js [data-stage] {
 
 .app-ui .ui-num {
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 3D world HUD ---------- */
+
+.world-layer {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.hud {
+  font-family: var(--font-sans);
+  color: var(--color-fg);
+  white-space: nowrap;
+  transition: none;
+  will-change: opacity;
+}
+
+.hud-tag,
+.hud-panel,
+.hud-gate,
+.hud-lead {
+  background: rgb(8 17 31 / 0.72);
+  border: 1px solid rgb(157 175 195 / 0.18);
+  box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.hud-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.hud-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-emerald);
+  box-shadow: 0 0 10px var(--color-emerald);
+}
+
+.hud-tag-solid {
+  background: var(--color-emerald);
+  color: var(--color-ink-950);
+  font-weight: 600;
+  border-color: transparent;
+}
+
+.hud-tag-solid::before {
+  background: var(--color-ink-950);
+  box-shadow: none;
+}
+
+.hud-panel {
+  display: block;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+}
+
+.hud-panel-wide {
+  min-width: 15rem;
+}
+
+.hud-panel-profit {
+  border-color: rgb(25 190 143 / 0.45);
+  box-shadow: 0 0 40px -10px rgb(25 190 143 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.hud-kicker {
+  display: block;
+  margin-bottom: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--color-slate);
+}
+
+.hud-gate {
+  padding: 0.5rem 0.6rem 0.55rem;
+  border-radius: 12px;
+}
+
+.hud-letter {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.08);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.hud-check {
+  padding: 0.12rem 0.35rem;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-slate-dim);
+  background: rgb(255 255 255 / 0.05);
+  transition: background-color 0.25s, color 0.25s;
+}
+
+.hud-check[data-state='pass'] {
+  color: #062b20;
+  background: var(--color-emerald);
+}
+
+.hud-check[data-state='fail'] {
+  color: #2d1c02;
+  background: #f5b44a;
+}
+
+.hud-result {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 10.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.hud-result[data-on='true'] {
+  opacity: 1;
+}
+
+.hud-result[data-tone='green'] {
+  color: var(--color-emerald);
+}
+
+.hud-result[data-tone='amber'] {
+  color: #f5b44a;
+}
+
+.hud-lead {
+  min-width: 13.5rem;
+  translate: 22px calc(-100% - 16px);
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  transition: translate 0.5s var(--ease-out-expo);
+}
+
+.hud-lead[data-side='left'] {
+  translate: calc(-100% - 22px) calc(-100% - 16px);
+}
+
+.hud-lead[data-side='top'] {
+  translate: -50% calc(-100% - 22px);
+}
+
+.hud-lead-more {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.45s var(--ease-out-expo), opacity 0.3s;
+}
+
+.hud-lead[data-compact='true'] .hud-lead-more {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.hud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #8fc0ff;
+  box-shadow: 0 0 10px #8fc0ff;
+}
+
+.hud-chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+  justify-self: end;
+}
+
+.hud-chip[data-on='true'] {
+  opacity: 1;
+}
+
+.hud-chip-blue {
+  color: #b9d4ff;
+  background: rgb(57 119 232 / 0.25);
+}
+
+.hud-chip-green {
+  color: #7ff0cb;
+  background: rgb(25 190 143 / 0.2);
+}
+
+.hud-chip-violet {
+  color: #c5bdff;
+  background: rgb(139 123 255 / 0.22);
+}
+
+.hud-chip-solid {
+  color: var(--color-ink-950);
+  background: var(--color-emerald);
+}
+
+/* Phones: fewer, smaller labels. Gates show just their letter, coloured by the outcome. */
+.hud-narrow-only {
+  display: none;
+}
+
+@media (width < 40rem) {
+  .hud {
+    scale: 0.9;
+  }
+  .hud-wide-only,
+  .hud-gate-name,
+  .hud-gate-checks,
+  .hud-gate .hud-result {
+    display: none;
+  }
+  .hud-narrow-only {
+    display: grid;
+  }
+  .hud-gate {
+    padding: 0.3rem;
+    border-radius: 9px;
+  }
+  .hud-gate .hud-letter {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    transition: background-color 0.25s, color 0.25s;
+  }
+  .hud-gate[data-result='pass'] .hud-letter {
+    background: var(--color-emerald);
+    color: #062b20;
+  }
+  .hud-gate[data-result='fail'] .hud-letter {
+    background: #f5b44a;
+    color: #2d1c02;
+  }
+}
+
+.tour-flash {
+  background: radial-gradient(40% 40% at 62% 55%, rgb(143 192 255 / 0.9), rgb(57 119 232 / 0.35) 45%, transparent 75%);
+  opacity: 0;
+}
+
+.tour[data-orient='row'] .world-layer {
+  -webkit-mask-image: linear-gradient(90deg, transparent var(--fade-a), #000 var(--fade-b));
+  mask-image: linear-gradient(90deg, transparent var(--fade-a), #000 var(--fade-b));
+}
+
+.tour[data-orient='column'] .world-layer {
+  -webkit-mask-image: linear-gradient(180deg, #000 var(--fade-a), rgb(0 0 0 / 0.25) var(--fade-b));
+  mask-image: linear-gradient(180deg, #000 var(--fade-a), rgb(0 0 0 / 0.25) var(--fade-b));
 }
