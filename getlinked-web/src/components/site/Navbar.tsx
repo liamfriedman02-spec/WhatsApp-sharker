@@ -5,7 +5,7 @@ import { ButtonLink } from './ButtonLink';
 import { Logo } from './Logo';
 
 const LINKS = [
-  { label: 'Platform', href: '#platform' },
+  { label: 'Platform', href: '#top' },
   { label: 'Solutions', href: '#solutions' },
   { label: 'Finance', href: '#finance' },
   { label: 'iGaming', href: '#igaming' },
@@ -61,7 +61,7 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          <ButtonLink href="#demo" size="sm" className="hidden sm:inline-flex">
+          <ButtonLink href="https://getlinked.io/" size="sm" className="hidden sm:inline-flex">
             Book a Demo
           </ButtonLink>
           <button
@@ -99,7 +99,7 @@ export function Navbar() {
                 </li>
               ))}
             </ul>
-            <ButtonLink href="#demo" size="lg" className="mt-auto w-full">
+            <ButtonLink href="https://getlinked.io/" size="lg" className="mt-auto w-full">
               Book a Demo
             </ButtonLink>
           </nav>
