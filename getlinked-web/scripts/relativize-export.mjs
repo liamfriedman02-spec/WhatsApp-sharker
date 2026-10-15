@@ -12,10 +12,13 @@ page = page
   .replace(/(?<=["'])\/icon\.svg/g, './icon.svg');
 writeFileSync(html, page);
 
+// The runtime's public path, and URLs of imported assets such as the logo.
 const chunks = join(out, '_next/static/chunks');
 for (const file of readdirSync(chunks)) {
-  if (!file.startsWith('turbopack-') || !file.endsWith('.js')) continue;
+  if (!file.endsWith('.js')) continue;
   const path = join(chunks, file);
-  writeFileSync(path, readFileSync(path, 'utf8').replace(':"/_next/"', ':"./_next/"'));
+  const code = readFileSync(path, 'utf8');
+  const next = code.replace(':"/_next/"', ':"./_next/"').replaceAll('"/_next/static/media/', '"./_next/static/media/');
+  if (next !== code) writeFileSync(path, next);
 }
 console.log('Export rewritten to relative paths in ./out');
