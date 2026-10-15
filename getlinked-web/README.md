@@ -4,8 +4,8 @@ The new marketing website for GetLinked.io, built separately from the production
 
 ## What's on the page
 
-1. **Hero:** the headline, both CTAs and the GetLinked dashboard, rebuilt in code. The dashboard appears only here.
-2. **How it works:** one lead's trip through GetLinked, playing on a loop. It's tracked and validated, matched to a bucket, skipped by A (cap reached) and B (no budget), routed to C, recycled to D after four hours without a conversion, and converts as an FTD with commission and profit worked out. The lead's event log fills in alongside the diagram.
+1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
+2. **How it works:** the lead's card travels along a track of stops, on a loop: tracked, validated, matched to a bucket, skipped by A (cap reached) and B (no budget), routed to C, recycled to D after four hours without a conversion, converted as an FTD, and paid out.
 3. **Platform:** in-depth sections for Tracking, Lead distribution, Lead Recycling, and Postbacks and integrations, then Reports, Affiliates and payouts, Finance and invoices, and Lead quality and monitoring. Each one has its own product screen.
 4. **Solutions:** Finance and iGaming.
 5. **Questions:** a short FAQ.
@@ -17,7 +17,7 @@ The product screens are React components styled like the real app, not images, s
 
 - Next.js 16 (App Router) + TypeScript
 - Tailwind CSS 4
-- GSAP 3 with ScrollTrigger and MotionPath (hero entrance, dashboard tilt, the lead animation)
+- GSAP 3 (the hero's entrance)
 
 All versions are pinned exactly in `package.json`.
 
@@ -48,15 +48,16 @@ npm run export:preview   # writes ./out
 |---|---|
 | `src/app/` | Layout, metadata, global styles and design tokens (`globals.css`), self-hosted fonts |
 | `src/components/site/` | Navigation, logo, buttons, footer, and `links.ts` (the demo link) |
-| `src/components/home/` | The page sections: hero, lead journey, platform, solutions, FAQ, closing CTA |
+| `src/components/home/` | The page sections: hero, lead track, platform, solutions, FAQ, closing CTA |
 | `src/components/home/screens.tsx` | The small product screens used in the platform sections |
 | `src/components/product/` | The rebuilt GetLinked app: shell, dashboard, charts, icons |
 
 ## Behaviour
 
-- **Motion:** the hero fades in once and the dashboard settles flat as you scroll. The lead animation plays only while it's on screen and has a pause button.
-- **Phones:** the lead diagram switches to a vertical layout, and the dashboard bleeds off the right edge so it stays readable.
-- **Reduced motion:** nothing moves. The lead diagram and its log show the finished journey.
+- **Colours:** the brand blue from the logo for the hero and closing CTA, light pages like the product itself, and green only for money and positive results. Tokens are in `globals.css`.
+- **Motion:** the hero fades in once. The lead track plays only while it's on screen and has a pause button.
+- **Phones:** the lead track runs top to bottom, and the dashboard bleeds off the right edge so it stays readable.
+- **Reduced motion:** nothing moves. The lead track shows the finished journey.
 
 ## Before launch
 

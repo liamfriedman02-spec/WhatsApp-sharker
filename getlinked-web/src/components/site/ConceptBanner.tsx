@@ -7,7 +7,7 @@ export function ConceptBanner() {
   return (
     <>
       <style>{':root{--banner-h:1.75rem}'}</style>
-      <div className="fixed inset-x-0 top-0 z-[60] flex h-7 items-center justify-center bg-emerald px-4 text-[0.78rem] font-medium text-ink-950">
+      <div className="fixed inset-x-0 top-0 z-[60] flex h-7 items-center justify-center bg-[#ffd166] px-4 text-[0.78rem] font-semibold text-ink">
         Design preview. Not the live GetLinked website.
       </div>
     </>

@@ -51,7 +51,7 @@ const MORE = [
     screen: <AffiliatesScreen />,
   },
   {
-    id: 'finance',
+    id: 'finance-tools',
     title: 'Finance and invoices',
     body: 'Income, commissions and profit are calculated as conversions land, so balances stay current and invoices are ready when the period closes.',
     screen: <InvoiceScreen />,
@@ -68,9 +68,9 @@ function FeatureRow({ id, kicker, title, body, points, screen, flip }: (typeof C
   return (
     <div id={id} className="grid scroll-mt-28 items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-20">
       <div className={flip ? 'lg:order-2' : ''}>
-        <p className="text-[0.9375rem] font-medium text-emerald">{kicker}</p>
-        <h3 className="mt-3 font-display text-[clamp(1.75rem,3vw,2.375rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-fg [text-wrap:balance]">{title}</h3>
-        <p className="mt-4 max-w-[34rem] text-[1.0625rem] leading-relaxed text-slate">{body}</p>
+        <p className="text-[0.9375rem] font-semibold text-bright">{kicker}</p>
+        <h3 className="mt-3 font-display text-[clamp(1.75rem,3vw,2.375rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-ink [text-wrap:balance]">{title}</h3>
+        <p className="mt-4 max-w-[34rem] text-[1.0625rem] leading-relaxed text-muted">{body}</p>
         <ul className="mt-7 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {points.map((p) => (
             <CheckItem key={p}>{p}</CheckItem>
@@ -85,7 +85,7 @@ function FeatureRow({ id, kicker, title, body, points, screen, flip }: (typeof C
 /** Every part of the platform, from the first click to the invoice. */
 export function Platform() {
   return (
-    <section id="platform" className="scroll-mt-20 py-24 sm:py-32">
+    <section id="platform" className="scroll-mt-20 border-t border-line bg-white py-24 sm:py-32">
       <div className="container-page">
         <SectionHeading kicker="Platform" title="Everything a lead touches, in one system.">
           Tracking, distribution, recycling, postbacks, reporting and payouts run on the same data. Every number you see
@@ -99,19 +99,19 @@ export function Platform() {
         </div>
 
         <div className="mt-28 sm:mt-36">
-          <h3 className="max-w-[40rem] font-display text-[clamp(1.75rem,3vw,2.375rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-fg [text-wrap:balance]">
+          <h3 className="max-w-[40rem] font-display text-[clamp(1.75rem,3vw,2.375rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-ink [text-wrap:balance]">
             And everything you need to run the network around it.
           </h3>
           <div className="mt-10 grid gap-5 md:grid-cols-2">
             {MORE.map((m) => (
-              <article key={m.id} id={m.id} className="flex scroll-mt-28 flex-col rounded-[28px] border border-line bg-ink-900/40 p-5 sm:p-7">
+              <article key={m.id} id={m.id} className="flex scroll-mt-28 flex-col rounded-[28px] bg-paper p-5 ring-1 ring-inset ring-line sm:p-7">
                 <div className="min-w-0 flex-1">{m.screen}</div>
-                <h4 className="mt-7 font-display text-[1.375rem] font-semibold tracking-[-0.02em] text-fg">{m.title}</h4>
-                <p className="mt-2 max-w-[32rem] text-[1rem] leading-relaxed text-slate">{m.body}</p>
+                <h4 className="mt-7 font-display text-[1.375rem] font-semibold tracking-[-0.02em] text-ink">{m.title}</h4>
+                <p className="mt-2 max-w-[32rem] text-[1rem] leading-relaxed text-muted">{m.body}</p>
               </article>
             ))}
           </div>
-          <p className="mt-6 text-[0.8125rem] text-slate-dim">Product screens show sample data.</p>
+          <p className="mt-6 text-[0.8125rem] text-faint">Product screens show sample data.</p>
         </div>
       </div>
     </section>

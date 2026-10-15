@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react';
 
-type Variant = 'primary' | 'glass';
+/** primary and outline sit on light backgrounds; white and outlineLight sit on the brand blue. */
+type Variant = 'primary' | 'outline' | 'white' | 'outlineLight';
 type Size = 'sm' | 'md' | 'lg' | 'hero';
 
 const base =
-  'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] font-medium tracking-[-0.005em] transition-[background-color,box-shadow,color] duration-300 ease-out-expo';
+  'relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[11px] font-semibold tracking-[-0.005em] transition-[background-color,box-shadow,color] duration-300 ease-out-expo';
 
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-emerald text-ink-950 shadow-[inset_0_1px_0_rgb(255_255_255/0.35),0_10px_30px_-12px_rgb(25_190_143/0.7)] hover:bg-emerald-hi hover:shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_14px_40px_-12px_rgb(25_190_143/0.9)]',
-  glass:
-    'bg-white/[0.045] text-fg ring-1 ring-inset ring-white/[0.12] backdrop-blur-md hover:bg-white/[0.08] hover:ring-white/[0.2]',
+  primary: 'bg-royal text-white shadow-[0_10px_28px_-12px_rgb(28_63_166/0.7)] hover:bg-bright',
+  outline: 'bg-white text-ink ring-1 ring-inset ring-line hover:ring-[#b6c1d6]',
+  white: 'bg-white text-royal shadow-[0_12px_30px_-12px_rgb(3_10_40/0.55)] hover:bg-[#eef3ff]',
+  outlineLight: 'text-white ring-[1.5px] ring-inset ring-white/50 hover:bg-white/10 hover:ring-white/80',
 };
 
 const sizes: Record<Size, string> = {

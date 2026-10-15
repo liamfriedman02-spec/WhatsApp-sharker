@@ -1,18 +1,20 @@
 @import 'tailwindcss';
 
-/* GetLinked design tokens. Dark-first: the brand lives on deep navy. */
+/* GetLinked design tokens. The brand blue comes from the logo; pages are light, like the product. */
 @theme {
-  --color-ink-950: #08111f;
-  --color-ink-900: #101c2d;
-  --color-ink-800: #16243a;
-  --color-fg: #f7f9fc;
-  --color-slate: #9dafc3;
-  --color-slate-dim: #6f8297;
-  --color-emerald: #19be8f;
-  --color-emerald-hi: #34d6a5;
-  --color-blue: #3977e8;
-  --color-line: rgb(157 175 195 / 0.14);
-  --color-glass: rgb(16 28 45 / 0.55);
+  --color-paper: #f5f7fc;
+  --color-mist: #eaeff9;
+  --color-ink: #0c1838;
+  --color-muted: #52607d;
+  --color-faint: #8590a8;
+  --color-line: #dde3ee;
+  --color-deep: #0e225f;
+  --color-royal: #1c3fa6;
+  --color-bright: #2f5bea;
+  --color-sky: #b7caff;
+  --color-money: #149a55;
+  --color-amber: #c77a07;
+  --color-violet: #6a4ddb;
 
   --font-display: var(--font-funnel-display), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-funnel-sans), ui-sans-serif, system-ui, sans-serif;
@@ -23,17 +25,17 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   html {
-    background: var(--color-ink-950);
+    background: var(--color-paper);
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    background: var(--color-ink-950);
-    color: var(--color-fg);
+    background: var(--color-paper);
+    color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -41,12 +43,11 @@
   }
 
   ::selection {
-    background: rgb(25 190 143 / 0.35);
-    color: var(--color-fg);
+    background: rgb(47 91 234 / 0.2);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-emerald);
+    outline: 2px solid var(--color-bright);
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -72,50 +73,57 @@
   }
 }
 
-/* ---------- Page ---------- */
+/* ---------- Brand surfaces ---------- */
+
+/* The logo's blue: used for the hero and the closing call to action. */
+.brand-blue {
+  background:
+    radial-gradient(60% 55% at 50% 0%, rgb(120 160 255 / 0.35), transparent 70%),
+    radial-gradient(40% 40% at 85% 60%, rgb(80 120 255 / 0.25), transparent 70%),
+    linear-gradient(170deg, var(--color-deep) 0%, var(--color-royal) 62%, #2650cf 100%);
+}
+
+.brand-grid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: 50% 0;
+  mask-image: radial-gradient(60% 60% at 50% 20%, #000 0%, transparent 80%);
+}
 
 .headline-fill {
-  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 45%, #c7d5e6 100%);
+  background: linear-gradient(180deg, #ffffff 45%, #dbe5ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.hero-backdrop {
-  background:
-    radial-gradient(48% 38% at 50% 62%, rgb(57 119 232 / 0.22), transparent 70%),
-    radial-gradient(30% 26% at 72% 78%, rgb(25 190 143 / 0.14), transparent 70%),
-    radial-gradient(28% 24% at 26% 74%, rgb(57 119 232 / 0.1), transparent 70%);
-}
-
-.hero-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgb(157 175 195 / 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(157 175 195 / 0.06) 1px, transparent 1px);
-  background-size: 64px 64px;
-  background-position: 50% 0;
-  mask-image: radial-gradient(60% 50% at 50% 30%, #000 0%, transparent 80%);
-}
-
-.hero-stage {
-  perspective: 1800px;
-  perspective-origin: 50% 0%;
-}
-
 .hero-frame {
-  transform-origin: 50% 0%;
   border-radius: 18px;
   box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.1),
-    0 40px 120px -30px rgb(57 119 232 / 0.45),
-    0 80px 160px -60px rgb(0 0 0 / 0.9);
+    0 0 0 1px rgb(255 255 255 / 0.25),
+    0 50px 100px -30px rgb(5 15 50 / 0.55);
 }
 
-.hero-glare {
-  background: linear-gradient(160deg, rgb(255 255 255 / 0.14) 0%, rgb(255 255 255 / 0.03) 22%, transparent 40%);
+/* The wordmark takes the text colour, so one file works on blue and on white. */
+.logo-mark {
+  aspect-ratio: 548 / 153;
+  background: currentColor;
+  -webkit-mask: var(--logo) no-repeat center / contain;
+  mask: var(--logo) no-repeat center / contain;
+}
+
+/* Product screens on the light page. */
+.screen {
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px #e1e6f0,
+    0 30px 60px -32px rgb(14 34 95 / 0.35);
 }
 
 .nav-in {
@@ -144,294 +152,213 @@
   }
 }
 
-/* Product screens on the dark page: a light card with a soft blue glow. */
-.screen {
-  border-radius: 16px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.08),
-    0 30px 80px -30px rgb(57 119 232 / 0.35),
-    0 40px 90px -50px rgb(0 0 0 / 0.9);
+/* ---------- Lead track ---------- */
+
+.track {
+  position: relative;
+  padding-top: 150px;
 }
 
-/* ---------- Lead journey ---------- */
-
-.journey-panel {
-  background:
-    radial-gradient(60% 60% at 50% 50%, rgb(57 119 232 / 0.14), transparent 70%),
-    linear-gradient(180deg, #0d1a2c, #08111f);
-}
-
-.cta-panel {
-  background:
-    radial-gradient(70% 90% at 50% 0%, rgb(57 119 232 / 0.3), transparent 70%),
-    radial-gradient(50% 70% at 50% 100%, rgb(25 190 143 / 0.18), transparent 70%),
-    #0b1626;
-}
-
-.journey-stage {
-  container-type: inline-size;
-  --u: calc(100cqw / 1000);
-}
-
-.journey-stage[data-layout='v'] {
-  --u: calc(100cqw / 360);
-}
-
-.j-lane {
-  fill: none;
-  stroke: rgb(157 175 195 / 0.16);
-  stroke-width: 1.5;
-}
-
-.j-hi {
-  fill: none;
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  opacity: 0;
-  filter: drop-shadow(0 0 6px currentColor);
-}
-
-.j-node {
+.track-line {
   position: absolute;
-  translate: -50% -50%;
+  left: 0;
+  right: 0;
+  top: 171px;
+  height: 4px;
+  border-radius: 4px;
+  background: #dde3f1;
+}
+
+.track-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-bright), #5f86ff);
+  box-shadow: 0 0 14px rgb(47 91 234 / 0.5);
+  transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.track-stops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.track-stop {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  border-radius: calc(var(--u) * 14);
-  background: rgb(16 28 45 / 0.86);
-  box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.08),
-    0 12px 30px -14px rgb(0 0 0 / 0.8);
-  backdrop-filter: blur(8px);
-  transition:
-    box-shadow 0.4s,
-    background-color 0.4s;
-}
-
-.j-title {
-  font-size: max(10.5px, calc(var(--u) * 15));
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--color-fg);
-  white-space: nowrap;
-}
-
-.j-sub {
-  font-size: max(9.5px, calc(var(--u) * 12.5));
-  color: var(--color-slate-dim);
-  white-space: nowrap;
-}
-
-.j-node[data-state='active'],
-.j-node[data-state='eligible'],
-.j-node[data-state='received'] {
-  box-shadow:
-    inset 0 0 0 1px rgb(25 190 143 / 0.7),
-    0 0 30px -6px rgb(25 190 143 / 0.55);
-}
-
-.j-node[data-state='cap'],
-.j-node[data-state='budget'] {
-  box-shadow:
-    inset 0 0 0 1px rgb(245 180 74 / 0.65),
-    0 0 26px -8px rgb(245 180 74 / 0.45);
-}
-
-.j-node[data-state='quiet'] {
-  box-shadow: inset 0 0 0 1px rgb(157 175 195 / 0.35);
-}
-
-.j-node[data-state='ftd'] {
-  background: rgb(9 52 42 / 0.92);
-  box-shadow:
-    inset 0 0 0 1px var(--color-emerald),
-    0 0 40px -4px rgb(25 190 143 / 0.75);
-}
-
-/* State-dependent text: every variant is rendered, the one matching the node's state shows. */
-.j-say {
-  display: inline-grid;
-}
-
-.j-say > * {
-  grid-area: 1 / 1;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.j-chip {
-  justify-self: start;
-  margin-top: calc(var(--u) * 6);
-  padding: calc(var(--u) * 2.5) calc(var(--u) * 8);
-  border-radius: 999px;
-  font-size: max(9px, calc(var(--u) * 11.5));
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.journey-stage[data-layout='v'] .j-chip {
-  max-width: 100%;
-  white-space: normal;
-  line-height: 1.15;
-}
-
-.j-chip-idle {
-  color: var(--color-slate-dim);
-  background: rgb(255 255 255 / 0.05);
-}
-
-.j-chip-amber {
-  color: #ffd38a;
-  background: rgb(245 180 74 / 0.16);
-}
-
-.j-chip-green {
-  color: #7ff0cb;
-  background: rgb(25 190 143 / 0.18);
-}
-
-.j-chip-slate {
-  color: var(--color-slate);
-  background: rgb(157 175 195 / 0.12);
-}
-
-.j-chip-solid {
-  color: var(--color-ink-950);
-  background: var(--color-emerald);
-}
-
-[data-state='idle'] > .j-say > [data-when='idle'],
-[data-state='active'] > .j-say > [data-when='idle'],
-[data-state='cap'] > .j-say > [data-when='cap'],
-[data-state='budget'] > .j-say > [data-when='budget'],
-[data-state='eligible'] > .j-say > [data-when='eligible'],
-[data-state='received'] > .j-say > [data-when='received'],
-[data-state='quiet'] > .j-say > [data-when='quiet'],
-[data-state='ftd'] > .j-say > [data-when='ftd'] {
-  opacity: 1;
-}
-
-.j-core {
-  position: absolute;
-  translate: -50% -50%;
-  display: flex;
+  min-width: 0;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.track-dot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
   justify-content: center;
-  gap: calc(var(--u) * 10);
-  border-radius: calc(var(--u) * 26);
-  background:
-    radial-gradient(80% 80% at 50% 0%, rgb(57 119 232 / 0.35), transparent 70%),
-    linear-gradient(180deg, #13284a, #0b1730);
-  box-shadow:
-    inset 0 0 0 1px rgb(143 192 255 / 0.35),
-    0 0 60px -10px rgb(57 119 232 / 0.6),
-    0 30px 60px -30px rgb(0 0 0 / 0.9);
-}
-
-.j-core-ring {
-  position: absolute;
-  inset: calc(var(--u) * -14);
-  border-radius: calc(var(--u) * 36);
-  border: 1px solid rgb(143 192 255 / 0.18);
-}
-
-.j-core-ring + .j-core-ring {
-  inset: calc(var(--u) * -30);
-  border-radius: calc(var(--u) * 48);
-  border-color: rgb(143 192 255 / 0.08);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .j-core-ring {
-    animation: core-ring 3.2s ease-in-out infinite;
-  }
-  .j-core-ring + .j-core-ring {
-    animation-delay: 0.4s;
-  }
-}
-
-@keyframes core-ring {
-  50% {
-    opacity: 0.35;
-    scale: 1.03;
-  }
-}
-
-.j-core-status {
-  font-size: max(9px, calc(var(--u) * 11.5));
-  font-weight: 500;
-  color: #b9d4ff;
-  white-space: nowrap;
-}
-
-.j-core-status > [data-when] {
-  justify-self: center;
-}
-
-.j-core[data-state='idle'] [data-when='idle'],
-.j-core[data-state='validate'] [data-when='validate'],
-.j-core[data-state='bucket'] [data-when='bucket'],
-.j-core[data-state='route'] [data-when='route'],
-.j-core[data-state='wait'] [data-when='wait'],
-.j-core[data-state='recycle'] [data-when='recycle'],
-.j-core[data-state='postback'] [data-when='postback'],
-.j-core[data-state='settle'] [data-when='settle'] {
-  opacity: 1;
-}
-
-.j-tag {
-  position: absolute;
-  translate: -50% -50%;
-  padding: calc(var(--u) * 4) calc(var(--u) * 10);
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: max(10px, calc(var(--u) * 13));
-  font-weight: 600;
-  white-space: nowrap;
-  background: rgb(8 17 31 / 0.85);
-  box-shadow: inset 0 0 0 1px currentColor;
-  opacity: 0;
-  visibility: hidden;
-}
-
-.j-log-row {
-  opacity: 0.28;
+  border-radius: 50%;
+  background: #fff;
+  color: #9aa6bd;
+  box-shadow: inset 0 0 0 2px #d6ddec;
   transition:
-    opacity 0.4s,
-    background-color 0.4s;
+    background-color 0.35s,
+    box-shadow 0.35s,
+    color 0.35s;
 }
 
-.j-log-row[data-on='true'] {
-  opacity: 1;
+.track-dot svg {
+  width: 20px;
+  height: 20px;
 }
 
-.j-log-row[data-on='true'] .j-log-dot {
-  background: var(--color-emerald);
-  box-shadow: 0 0 10px var(--color-emerald);
+.track-stop b {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.j-log-row[data-tone='amber'][data-on='true'] .j-log-dot {
-  background: #f5b44a;
-  box-shadow: 0 0 10px #f5b44a;
+.track-stop small {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: var(--color-muted);
 }
 
-.j-log-row[data-tone='violet'][data-on='true'] .j-log-dot {
-  background: #8b7bff;
-  box-shadow: 0 0 10px #8b7bff;
+.track-stop[data-s='good'] .track-dot {
+  background: var(--color-bright);
+  color: #fff;
+  box-shadow: 0 6px 16px -4px rgb(47 91 234 / 0.6);
 }
 
-.j-status > * {
-  grid-area: 1 / 1;
-  opacity: 0;
-  transition: opacity 0.3s;
+.track-stop[data-s='bad'] .track-dot {
+  background: #fff4e0;
+  color: var(--color-amber);
+  box-shadow: inset 0 0 0 2px #f3c77a;
 }
 
-.j-status[data-state='new'] [data-when='new'],
-.j-status[data-state='routed'] [data-when='routed'],
-.j-status[data-state='recycled'] [data-when='recycled'],
-.j-status[data-state='converted'] [data-when='converted'] {
-  opacity: 1;
+.track-stop[data-s='violet'] .track-dot {
+  background: var(--color-violet);
+  color: #fff;
+  box-shadow: 0 6px 16px -4px rgb(106 77 219 / 0.6);
+}
+
+.track-stop[data-s='win'] .track-dot {
+  background: var(--color-money);
+  color: #fff;
+  box-shadow:
+    0 0 0 6px rgb(20 154 85 / 0.18),
+    0 6px 18px -4px rgb(20 154 85 / 0.7);
+}
+
+.track-stop[data-s='bad'] small {
+  color: var(--color-amber);
+}
+
+.track-stop[data-s='win'] small {
+  font-weight: 600;
+  color: var(--color-money);
+}
+
+.track-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 232px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 20px 40px -18px rgb(12 24 56 / 0.35),
+    0 0 0 1px rgb(12 24 56 / 0.06);
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.track-card::after {
+  content: '';
+  position: absolute;
+  left: var(--tip, 50%);
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+  box-shadow: 4px 4px 6px -3px rgb(12 24 56 / 0.15);
+  transition: left 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.track-chip {
+  background: #e8eeff;
+  color: var(--color-royal);
+}
+
+.track-chip[data-tone='amber'] {
+  background: #fff1d9;
+  color: var(--color-amber);
+}
+
+.track-chip[data-tone='violet'] {
+  background: #efeaff;
+  color: var(--color-violet);
+}
+
+.track-chip[data-tone='green'] {
+  background: #e3f6ec;
+  color: var(--color-money);
+}
+
+@media (width < 54rem) {
+  .track {
+    padding-top: 0;
+  }
+  .track-card {
+    position: relative;
+    width: auto;
+    margin-bottom: 20px;
+    transform: none !important;
+  }
+  .track-card::after {
+    display: none;
+  }
+  .track-line {
+    top: var(--line-top, 140px);
+    bottom: 23px;
+    left: 21px;
+    right: auto;
+    width: 4px;
+    height: auto;
+  }
+  .track-fill {
+    width: 100% !important;
+    height: var(--fill, 0%);
+    transition: height 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .track-stops {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .track-stop {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    column-gap: 14px;
+    align-items: center;
+    text-align: left;
+  }
+  .track-dot {
+    grid-row: span 2;
+  }
+  .track-stop b {
+    margin: 0;
+    align-self: end;
+  }
+  .track-stop small {
+    align-self: start;
+  }
 }
 
 /* ---------- Product UI recreation (GetLinked app) ---------- */

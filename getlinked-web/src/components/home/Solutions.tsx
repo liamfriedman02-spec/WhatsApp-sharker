@@ -8,7 +8,7 @@ const VERTICALS = [
     body: 'Crypto, investing and trading offers live on lead quality and timing. Route each lead by GEO and working hours, cap advertisers per day, and give unconverted leads a second buyer.',
     tags: ['Crypto', 'Investing', 'Trading'],
     points: ['GEO and schedule routing', 'Daily caps per advertiser', 'FTD and deposit tracking', 'Lead Recycling'],
-    glow: 'rgb(57 119 232 / 0.28)',
+    glow: 'rgb(47 91 234 / 0.16)',
   },
   {
     id: 'igaming',
@@ -17,7 +17,7 @@ const VERTICALS = [
     body: 'Track players from the first click to their first deposit, pay every affiliate on the deal you agreed, and see which partners and countries actually make you money.',
     tags: ['Casino', 'Sportsbook'],
     points: ['CPA, RevShare and hybrid deals', 'FTD tracking by postback', 'Affiliate and sub ID reports', 'Profit per affiliate and country'],
-    glow: 'rgb(25 190 143 / 0.24)',
+    glow: 'rgb(20 154 85 / 0.14)',
   },
 ];
 
@@ -31,22 +31,22 @@ export function Solutions() {
             <article
               key={v.id}
               id={v.id}
-              className="relative scroll-mt-28 overflow-hidden rounded-[28px] border border-line bg-ink-900/50 p-7 sm:p-10"
+              className="relative scroll-mt-28 overflow-hidden rounded-[28px] bg-white p-7 shadow-[0_30px_60px_-40px_rgb(14_34_95/0.35)] ring-1 ring-inset ring-line sm:p-10"
             >
               <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl" style={{ background: v.glow }} />
               <div className="relative">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-display text-[1.75rem] font-semibold tracking-[-0.03em] text-fg">{v.name}</span>
+                  <span className="font-display text-[1.75rem] font-semibold tracking-[-0.03em] text-ink">{v.name}</span>
                   <span className="ml-auto flex flex-wrap gap-1.5">
                     {v.tags.map((t) => (
-                      <span key={t} className="rounded-full border border-line px-2.5 py-1 text-[0.75rem] text-slate">
+                      <span key={t} className="rounded-full bg-mist px-2.5 py-1 text-[0.75rem] font-medium text-royal">
                         {t}
                       </span>
                     ))}
                   </span>
                 </div>
-                <h3 className="mt-6 text-[1.25rem] font-semibold tracking-[-0.015em] text-fg">{v.title}</h3>
-                <p className="mt-3 max-w-[32rem] text-[1rem] leading-relaxed text-slate">{v.body}</p>
+                <h3 className="mt-6 text-[1.25rem] font-semibold tracking-[-0.015em] text-ink">{v.title}</h3>
+                <p className="mt-3 max-w-[32rem] text-[1rem] leading-relaxed text-muted">{v.body}</p>
                 <ul className="mt-7 grid gap-3 sm:grid-cols-2">
                   {v.points.map((p) => (
                     <CheckItem key={p}>{p}</CheckItem>
