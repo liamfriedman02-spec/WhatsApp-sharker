@@ -19,7 +19,6 @@ function KpiCard({
   icon,
   title,
   value,
-  kpi,
   rows,
   delta,
   seed,
@@ -28,7 +27,6 @@ function KpiCard({
   icon: React.ReactNode;
   title: string;
   value: string;
-  kpi?: string;
   rows: [string, string][];
   delta: string;
   seed: number;
@@ -52,7 +50,7 @@ function KpiCard({
         <span className={`ml-auto text-[9px] ${dark ? 'text-[#7ee2a8]' : 'text-[var(--ui-faint)]'}`}>Report →</span>
       </div>
       <div className="mt-1.5 flex items-end justify-between">
-        <span data-kpi={kpi} className="ui-num text-[21px] font-semibold tracking-[-0.03em]">
+        <span className="ui-num text-[21px] font-semibold tracking-[-0.03em]">
           {value}
         </span>
         {!dark && <Spark seed={seed} />}
@@ -144,7 +142,7 @@ const PERFORMERS = [
 /** The GetLinked dashboard, recreated with sample data. */
 export function DashboardView() {
   return (
-    <div data-tour="dashboard" className="absolute inset-0">
+    <div className="absolute inset-0">
       <div className="absolute left-6 top-[16px] text-[10px] text-[var(--ui-faint)]">
         Overview › <span className="text-[var(--ui-text)]">Dashboard</span>
       </div>
@@ -163,11 +161,10 @@ export function DashboardView() {
       </div>
 
       {/* KPI row */}
-      <div data-tour="kpis" className="absolute left-6 top-[90px] h-[120px] w-[1008px]">
+      <div className="absolute left-6 top-[90px] h-[120px] w-[1008px]">
         <div className="absolute left-0 top-0">
           <KpiCard
             dark
-            kpi="profit"
             icon={<IconDollar size={11} />}
             title="Profit"
             value={usd(48210.4)}
@@ -194,7 +191,6 @@ export function DashboardView() {
         </div>
         <div className="absolute left-[408px] top-0">
           <KpiCard
-            kpi="leads"
             icon={<IconTarget size={11} />}
             title="Leads"
             value="34,855"
@@ -208,7 +204,6 @@ export function DashboardView() {
         </div>
         <div className="absolute left-[612px] top-0">
           <KpiCard
-            kpi="conversions"
             icon={<IconCheck size={11} />}
             title="Conversions"
             value="574"

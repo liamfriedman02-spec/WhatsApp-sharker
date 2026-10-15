@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { APP_H, APP_W, NAV, SIDEBAR_W, TOPBAR_H } from '../tourData';
+import { APP_H, APP_W, NAV, SIDEBAR_W, TOPBAR_H } from './appData';
 import {
   IconBell,
   IconChart,
@@ -73,7 +73,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         </div>
 
         <div
-          data-tour="nav-pill"
+         
           className="absolute left-3 right-3 h-7 rounded-lg bg-[#1b2b5b] ring-1 ring-inset ring-white/[0.06]"
           style={{ top: items.dashboard }}
         />
@@ -92,7 +92,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           return (
             <span
               key={item.id}
-              data-nav={item.id}
+             
               className={`absolute left-5 flex h-7 items-center gap-2.5 text-[11.5px] font-medium ${
                 item.id === 'dashboard' ? 'text-white' : ''
               }`}
