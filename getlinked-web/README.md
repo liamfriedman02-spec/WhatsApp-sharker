@@ -5,7 +5,7 @@ The new marketing website for GetLinked.io, built separately from the production
 ## What's on the page
 
 1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
-2. **How it works:** the lead's card travels along a track of stops, on a loop: tracked, validated, matched to a bucket, skipped by A (cap reached) and B (no budget), routed to C, recycled to D after four hours without a conversion, converted as an FTD, and paid out.
+2. **Why GetLinked:** 300+ networks, 200+ features and real-time tracking in large numbers, then three reasons to choose GetLinked.
 3. **Platform:** "Everything You Need to Run Your Affiliate Network." Four cards (Smart Lead Distribution, Automated Lead Recycling, High-Speed Lead Processing, Real-Time Tracking & Analytics), then postbacks, partner management, finance and monitoring. Every card shows a GetLinked screen instead of an icon.
 4. **Solutions:** Finance and iGaming.
 5. **Questions:** a short FAQ.
@@ -48,19 +48,20 @@ npm run export:preview   # writes ./out
 |---|---|
 | `src/app/` | Layout, metadata, global styles and design tokens (`globals.css`), self-hosted fonts |
 | `src/components/site/` | Navigation, logo, buttons, footer, and `links.ts` (the demo link) |
-| `src/components/home/` | The page sections: hero, lead track, platform, solutions, FAQ, closing CTA |
+| `src/components/home/` | The page sections: hero, why GetLinked, platform, solutions, FAQ, closing CTA |
 | `src/components/home/screens.tsx` | The small product screens used in the platform sections |
 | `src/components/product/` | The rebuilt GetLinked app: shell, dashboard, charts, icons |
 
 ## Behaviour
 
 - **Colours:** the brand blue from the logo for the hero and closing CTA, light pages like the product itself, and green only for money and positive results. Tokens are in `globals.css`.
-- **Motion:** the hero fades in once. The lead track plays only while it's on screen and has a pause button.
-- **Phones:** the lead track runs top to bottom, and the dashboard bleeds off the right edge so it stays readable.
-- **Reduced motion:** nothing moves. The lead track shows the finished journey.
+- **Motion:** only the hero fades in once. Nothing else animates.
+- **Phones:** the dashboard bleeds off the right edge so it stays readable.
+- **Reduced motion:** the hero appears without the fade.
 
 ## Before launch
 
 - **Demo link:** every "Book a Demo" button points to `https://getlinked.io/`. Set the real booking page in `src/components/site/links.ts`.
 - **Logo:** `src/components/site/getlinked-logo.svg` and the "g" tab icon (`src/app/icon.svg`) are traced from a JPG of the logo. Replace them with the original vector files when available for perfectly clean edges.
+- **Numbers:** 300+ networks and 200+ features come from GetLinked. Confirm them before launch.
 - **Product details:** check the feature wording (Lead Recycling rules, payout models, integrations, lead quality checks) against how the product works today.

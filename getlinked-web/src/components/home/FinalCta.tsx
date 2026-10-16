@@ -17,8 +17,8 @@ export function FinalCta() {
               <ButtonLink href={DEMO_URL} variant="white" size="hero">
                 Book a Demo
               </ButtonLink>
-              <ButtonLink href="#journey" variant="outlineLight" size="hero">
-                Watch a lead go through
+              <ButtonLink href="#platform" variant="outlineLight" size="hero">
+                Explore the Platform
               </ButtonLink>
             </div>
           </div>
