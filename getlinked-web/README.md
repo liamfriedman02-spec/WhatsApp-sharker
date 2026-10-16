@@ -6,13 +6,13 @@ The new marketing website for GetLinked.io, built separately from the production
 
 1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
 2. **Why GetLinked:** 300+ networks, 200+ features and real-time tracking in large numbers, then three reasons to choose GetLinked.
-3. **Platform:** "Everything You Need to Run Your Affiliate Network." Four cards (Smart Lead Distribution, Automated Lead Recycling, High-Speed Lead Processing, Real-Time Tracking & Analytics), each showing a GetLinked screen instead of an icon.
+3. **Platform:** "Everything You Need to Run Your Affiliate Network." A wall of twelve features with icons (routing, recycling, injection, caps and budgets, schedules, postbacks, partners, payouts, invoices, analytics, permissions, lead quality), and a line pointing to the 200+ in total.
 4. **Solutions:** "One platform. Three ways to grow." Three cards on the deep brand blue (CR Boost, Partner Platform, Lead Distribution), each with its own illustration and three features.
 5. **Industries:** Finance and iGaming.
 6. **Questions:** a short FAQ.
 7. **Closing CTA and footer.**
 
-The product screens are React components styled like the real app, not images, so text stays sharp. **All figures are sample data.**
+The dashboard is a React component styled like the real app, not an image, so text stays sharp. **Its figures are sample data.**
 
 ## Stack
 
@@ -50,7 +50,6 @@ npm run export:preview   # writes ./out
 | `src/app/` | Layout, metadata, global styles and design tokens (`globals.css`), self-hosted fonts |
 | `src/components/site/` | Navigation, logo, buttons, footer, and `links.ts` (the demo link) |
 | `src/components/home/` | The page sections: hero, why GetLinked, platform, solutions (pillars), industries, FAQ, closing CTA |
-| `src/components/home/screens.tsx` | The small product screens used in the platform sections |
 | `src/components/product/` | The rebuilt GetLinked app: shell, dashboard, charts, icons |
 
 ## Behaviour
