@@ -8,7 +8,6 @@ const COLUMNS = [
       ['Tracking', '#tracking'],
       ['Lead distribution', '#distribution'],
       ['Lead Recycling', '#recycling'],
-      ['Postbacks', '#postbacks'],
       ['Lead processing', '#processing'],
     ],
   },

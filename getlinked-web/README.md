@@ -6,7 +6,7 @@ The new marketing website for GetLinked.io, built separately from the production
 
 1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
 2. **Why GetLinked:** 300+ networks, 200+ features and real-time tracking in large numbers, then three reasons to choose GetLinked.
-3. **Platform:** "Everything You Need to Run Your Affiliate Network." Four cards (Smart Lead Distribution, Automated Lead Recycling, High-Speed Lead Processing, Real-Time Tracking & Analytics), then postbacks, partner management, finance and monitoring. Every card shows a GetLinked screen instead of an icon.
+3. **Platform:** "Everything You Need to Run Your Affiliate Network." Four cards (Smart Lead Distribution, Automated Lead Recycling, High-Speed Lead Processing, Real-Time Tracking & Analytics), each showing a GetLinked screen instead of an icon.
 4. **Solutions:** Finance and iGaming.
 5. **Questions:** a short FAQ.
 6. **Closing CTA and footer.**
