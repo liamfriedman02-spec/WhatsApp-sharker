@@ -15,7 +15,7 @@ const icon = (path: ReactNode) => (
 const REASONS = [
   {
     title: 'Route every lead',
-    body: 'Buckets send each lead to the advertiser that can take it, by GEO, caps, budget and working hours.',
+    body: 'Automatically distribute leads to the right advertiser based on GEO, caps, budgets, and working hours. Maximize acceptance rates and keep traffic flowing efficiently.',
     icon: icon(
       <>
         <circle cx="6" cy="6" r="2.5" />
@@ -27,7 +27,7 @@ const REASONS = [
   },
   {
     title: 'Recycle what didn’t convert',
-    body: 'Unconverted leads go to the next eligible advertiser on their own, so less of your traffic goes to waste.',
+    body: 'Automatically redistribute rejected and unconverted leads to eligible advertisers using smart reshuffling rules. Generate more revenue from your existing traffic.',
     icon: icon(
       <>
         <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
@@ -39,7 +39,7 @@ const REASONS = [
   },
   {
     title: 'See profit live',
-    body: 'Clicks, conversions, commissions and profit update in real time, per affiliate, offer and country.',
+    body: 'Track leads, conversions, revenue, costs, and net profit in real time. Analyze performance by affiliate, advertiser, campaign, and country from one dashboard.',
     icon: icon(
       <>
         <path d="M4 20h16" />
