@@ -1,3 +1,4 @@
+import { BotSection } from '@/components/home/BotSection';
 import { Faq } from '@/components/home/Faq';
 import { FinalCta } from '@/components/home/FinalCta';
 import { Hero } from '@/components/home/Hero';
@@ -19,6 +20,7 @@ export default function HomePage() {
         <WhyGetLinked />
         <Platform />
         <Pillars />
+        <BotSection />
         <Solutions />
         <Faq />
         <FinalCta />
