@@ -7,7 +7,7 @@ import { Logo } from './Logo';
 
 const LINKS = [
   { label: 'Platform', href: '#platform' },
-  { label: 'Solutions', href: '#solutions' },
+  { label: 'Solutions', href: '#grow' },
   { label: 'Finance', href: '#finance' },
   { label: 'iGaming', href: '#igaming' },
   { label: 'Resources', href: '#resources' },

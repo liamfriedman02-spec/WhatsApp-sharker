@@ -25,7 +25,7 @@ export function Solutions() {
   return (
     <section id="solutions" className="scroll-mt-20 border-t border-line py-24 sm:py-32">
       <div className="container-page">
-        <SectionHeading kicker="Solutions" title="Built for the two industries we know best." />
+        <SectionHeading kicker="Industries" title="Built for the two industries we know best." />
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
           {VERTICALS.map((v) => (
             <article
