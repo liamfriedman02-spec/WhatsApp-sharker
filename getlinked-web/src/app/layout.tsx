@@ -25,12 +25,12 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://getlinked.io'),
-  title: 'GetLinked | The Most Advanced Finance & iGaming Tracking Platform',
+  title: 'GetLinked | Your Entire Affiliate Traffic. One Powerful Platform.',
   description:
-    'Track every click. Route every lead. Control every outcome. The complete performance infrastructure for affiliate tracking, intelligent lead distribution, and network management.',
+    'GetLinked is the most advanced affiliate management platform for Finance and iGaming: intelligent lead distribution, automated reshuffling, partner management and real-time tracking in one platform.',
   openGraph: {
-    title: 'GetLinked | The Most Advanced Finance & iGaming Tracking Platform',
-    description: 'Track every click. Route every lead. Control every outcome.',
+    title: 'GetLinked | Your Entire Affiliate Traffic. One Powerful Platform.',
+    description: 'The most advanced affiliate management platform for Finance and iGaming.',
     type: 'website',
   },
 };

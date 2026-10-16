@@ -44,24 +44,26 @@ export function Hero() {
   );
 
   return (
-    <section ref={root} id="top" className="relative overflow-x-clip pb-14 pt-[calc(var(--banner-h,0px)+7.5rem)] lg:pt-[calc(var(--banner-h,0px)+8.5rem)]">
+    <section ref={root} id="top" className="relative overflow-x-clip pb-14 pt-[calc(var(--banner-h,0px)+6.5rem)] sm:pt-[calc(var(--banner-h,0px)+7.5rem)] lg:pt-[calc(var(--banner-h,0px)+8.5rem)]">
       <div aria-hidden="true" className="brand-blue brand-grid pointer-events-none absolute inset-x-0 top-0 bottom-[24%] sm:bottom-[32%]" />
 
       <div className="container-page relative text-center text-white">
         <h1
           data-intro
-          className="headline-fill mx-auto max-w-[26ch] font-display text-[clamp(2.5rem,5.2vw,4.25rem)] font-semibold leading-[1.03] tracking-[-0.038em] [text-wrap:balance]"
+          className="headline-fill mx-auto max-w-[24ch] font-display text-[clamp(2.25rem,5.4vw,4.5rem)] font-semibold leading-[1.03] tracking-[-0.038em] [text-wrap:balance]"
         >
-          The Most Advanced Finance&nbsp;&amp; iGaming Tracking Platform
+          <span className="block">Your Entire Affiliate Traffic.</span>
+          <span className="block">One Powerful Platform.</span>
         </h1>
-        <p data-intro className="mx-auto mt-6 max-w-[40rem] text-[1.125rem] font-medium tracking-[-0.01em] sm:text-[1.25rem]">
-          Track every click. Route every lead. Control every outcome.
+        <p data-intro className="mx-auto mt-6 max-w-[42rem] text-[1.0625rem] font-medium leading-snug tracking-[-0.01em] sm:mt-7 sm:text-[1.3125rem]">
+          GetLinked is the most advanced affiliate management platform, trusted by over 300 networks and offering more than
+          200 powerful features.
         </p>
-        <p data-intro className="mx-auto mt-3 max-w-[34rem] text-[1rem] leading-relaxed text-sky sm:text-[1.0625rem]">
-          The complete performance infrastructure for affiliate tracking, intelligent lead distribution, and network
-          management.
+        <p data-intro className="mx-auto mt-3 max-w-[40rem] text-[0.9375rem] leading-relaxed text-sky sm:mt-4 sm:text-[1.0625rem]">
+          Built for Finance and iGaming, GetLinked combines intelligent lead distribution, automated reshuffling, partner
+          management, and real-time tracking in one powerful platform designed to maximize performance and accelerate growth.
         </p>
-        <div data-intro className="mt-8 flex flex-wrap justify-center gap-3">
+        <div data-intro className="mt-7 flex flex-wrap justify-center gap-3 sm:mt-8">
           <ButtonLink href={DEMO_URL} variant="white" size="hero">
             Book a Demo
           </ButtonLink>
