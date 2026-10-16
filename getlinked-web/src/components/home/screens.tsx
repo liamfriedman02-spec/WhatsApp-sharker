@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { HourlyBars } from '@/components/product/charts';
 
 /**
  * Small GetLinked screens for the feature sections, styled like the real app.
@@ -49,52 +50,43 @@ function Segmented({ items, active }: { items: string[]; active: string }) {
 const th = 'px-2 py-2 text-left text-[10.5px] font-medium text-[var(--ui-faint)] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5';
 const td = 'px-2 py-2.5 text-[11.5px] first:pl-4 last:pr-4 sm:first:pl-5 sm:last:pr-5';
 
-/* ---------------------------------------------------------------- Tracking */
+/* ---------------------------------------------------------------- Processing */
 
-const CLICKS = [
-  { t: '14:09:02', id: '9f3a71c2', aff: '#214', sub: 'fb_cmp_17', geo: 'CA', dev: 'iOS', status: ['Lead', 'green'] },
-  { t: '14:09:01', id: '4be20d17', aff: '#318', sub: 'gg_brand_04', geo: 'UK', dev: 'Android', status: ['Click', 'slate'] },
-  { t: '14:08:58', id: 'c71a09e3', aff: '#102', sub: 'tt_ig_22', geo: 'IT', dev: 'Desktop', status: ['Lead', 'green'] },
-  { t: '14:08:55', id: '0d5e8b44', aff: '#214', sub: 'fb_cmp_17', geo: 'CA', dev: 'Android', status: ['FTD', 'navy'] },
-  { t: '14:08:51', id: 'a92f3c60', aff: '#407', sub: 'nat_fin_09', geo: 'NO', dev: 'iOS', status: ['Click', 'slate'] },
-  { t: '14:08:47', id: '77c1e5d2', aff: '#318', sub: 'gg_brand_04', geo: 'ES', dev: 'Desktop', status: ['Duplicate', 'red'] },
+const STREAM = [
+  { t: '14:09:03.412', id: 'GL-48213', geo: 'CA', to: 'Advertiser C', ms: '82 ms', status: ['Delivered', 'green'] },
+  { t: '14:09:03.398', id: 'GL-48212', geo: 'UK', to: 'Advertiser F', ms: '76 ms', status: ['Delivered', 'green'] },
+  { t: '14:09:03.371', id: 'GL-48211', geo: 'IT', to: 'Advertiser A', ms: '91 ms', status: ['Delivered', 'green'] },
+  { t: '14:09:03.355', id: 'GL-48210', geo: 'ES', to: '—', ms: '12 ms', status: ['Duplicate', 'red'] },
+  { t: '14:09:03.340', id: 'GL-48209', geo: 'NO', to: 'Advertiser D', ms: '88 ms', status: ['Recycled', 'violet'] },
+  { t: '14:09:03.326', id: 'GL-48208', geo: 'IE', to: 'Advertiser K', ms: '79 ms', status: ['Delivered', 'green'] },
 ] as const;
 
-export function ClicksScreen() {
+export function ProcessingScreen() {
   return (
-    <Screen
-      crumb="Reports › Clicks"
-      title="Clicks"
-      aside={
-        <>
-          <Segmented items={['Today', '7 days', '30 days']} active="Today" />
-          <Pill tone="green">● Live</Pill>
-        </>
-      }
-    >
+    <Screen crumb="Leads" title="Live lead stream" aside={<Pill tone="green">● Live</Pill>}>
+      <div className="ui-num grid grid-cols-3 border-b border-[var(--ui-line)]">
+        {[
+          ['Leads per minute', '1,240'],
+          ['Avg. processing', '84 ms'],
+          ['In queue', '0'],
+        ].map(([label, value]) => (
+          <div key={label} className="border-r border-[var(--ui-line)] px-4 py-3 last:border-0 sm:px-5">
+            <p className="text-[10.5px] text-[var(--ui-faint)]">{label}</p>
+            <p className="mt-0.5 text-[16px] font-semibold tracking-[-0.02em]">{value}</p>
+          </div>
+        ))}
+      </div>
       <table className="w-full">
-        <thead className="border-b border-[var(--ui-line)] bg-[#fafbfc]">
-          <tr>
-            <th className={th}>Time</th>
-            <th className={th}>Click ID</th>
-            <th className={th}>Affiliate</th>
-            <th className={`${th} hidden sm:table-cell`}>Sub ID</th>
-            <th className={th}>GEO</th>
-            <th className={`${th} hidden md:table-cell`}>Device</th>
-            <th className={`${th} text-right`}>Status</th>
-          </tr>
-        </thead>
         <tbody className="divide-y divide-[var(--ui-line)]">
-          {CLICKS.map((c) => (
-            <tr key={c.id}>
-              <td className={`${td} ui-mono text-[var(--ui-muted)]`}>{c.t}</td>
-              <td className={`${td} ui-mono`}>{c.id}</td>
-              <td className={`${td} font-medium`}>{c.aff}</td>
-              <td className={`${td} ui-mono hidden text-[var(--ui-muted)] sm:table-cell`}>{c.sub}</td>
-              <td className={td}>{c.geo}</td>
-              <td className={`${td} hidden text-[var(--ui-muted)] md:table-cell`}>{c.dev}</td>
+          {STREAM.map((r) => (
+            <tr key={r.id}>
+              <td className={`${td} ui-mono hidden text-[var(--ui-muted)] sm:table-cell`}>{r.t}</td>
+              <td className={`${td} ui-mono font-medium`}>{r.id}</td>
+              <td className={td}>{r.geo}</td>
+              <td className={`${td} hidden text-[var(--ui-muted)] md:table-cell`}>{r.to}</td>
+              <td className={`${td} ui-mono text-right text-[var(--ui-muted)]`}>{r.ms}</td>
               <td className={`${td} text-right`}>
-                <Pill tone={c.status[1]}>{c.status[0]}</Pill>
+                <Pill tone={r.status[1]}>{r.status[0]}</Pill>
               </td>
             </tr>
           ))}
@@ -141,11 +133,11 @@ export function BucketScreen() {
               <td className={td}>
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--ui-bg)] text-[10px] font-semibold text-[var(--ui-muted)]">{b.n}</span>
               </td>
-              <td className={`${td} font-medium`}>{b.name}</td>
+              <td className={`${td} whitespace-nowrap font-medium`}>{b.name}</td>
               <td className={`${td} ui-num hidden sm:table-cell`}>{b.weight}</td>
               <td className={td}>
                 <span className="flex items-center gap-2">
-                  <span className="h-1.5 w-14 rounded-full bg-[#eef0f5] sm:w-20">
+                  <span className="hidden h-1.5 w-20 rounded-full bg-[#eef0f5] sm:block">
                     <span
                       className={`block h-full rounded-full ${b.used >= b.cap ? 'bg-[#f0a530]' : 'bg-[var(--ui-green)]'}`}
                       style={{ width: `${(b.used / b.cap) * 100}%` }}
@@ -261,40 +253,50 @@ export function PostbackScreen() {
   );
 }
 
-/* ---------------------------------------------------------------- Reports */
+/* ---------------------------------------------------------------- Analytics */
 
-const DRILL = [
-  { geo: 'Canada', clicks: '18,402', leads: '3,511', cr: '2.1%', ftd: '74', epc: '$1.32', profit: '$24,290' },
-  { geo: 'United Kingdom', clicks: '12,960', leads: '2,204', cr: '1.8%', ftd: '40', epc: '$1.05', profit: '$13,610' },
-  { geo: 'Ireland', clicks: '6,118', leads: '1,019', cr: '1.6%', ftd: '16', epc: '$0.88', profit: '$5,380' },
-  { geo: 'Norway', clicks: '3,744', leads: '702', cr: '1.4%', ftd: '10', epc: '$0.91', profit: '$3,410' },
+const PARTNERS = [
+  { id: 'Affiliate #214', leads: '3,511', cr: '2.1%', profit: '$24,290' },
+  { id: 'Affiliate #318', leads: '2,204', cr: '1.8%', profit: '$13,610' },
+  { id: 'Affiliate #102', leads: '1,019', cr: '1.6%', profit: '$5,380' },
 ];
 
-export function DrillDownScreen() {
+export function AnalyticsScreen() {
   return (
-    <Screen crumb="Reports › Drill-down › Affiliate #214 › Finance CA Tier 1" title="By country" aside={<Segmented items={['Offers', 'Affiliates', 'Countries']} active="Countries" />}>
+    <Screen crumb="Overview" title="Performance" aside={<Segmented items={['Today', '7 days', '30 days']} active="Today" />}>
+      <div className="ui-num grid grid-cols-2 gap-2 px-4 pt-3.5 sm:grid-cols-4 sm:px-5">
+        {[
+          ['Clicks', '191,589', '8.1%'],
+          ['Leads', '34,855', '3.6%'],
+          ['Conversions', '574', '2.2%'],
+          ['Revenue', '$212,480', '9.4%'],
+        ].map(([label, value, delta]) => (
+          <div key={label} className="rounded-lg border border-[var(--ui-line)] px-2.5 py-2">
+            <p className="text-[10.5px] text-[var(--ui-faint)]">{label}</p>
+            <p className="text-[15px] font-semibold tracking-[-0.02em]">{value}</p>
+            <p className="text-[9.5px] font-semibold text-[#1f7a43]">↗ {delta}</p>
+          </div>
+        ))}
+      </div>
+      <div className="px-3 pt-3 sm:px-4 [&>svg]:h-auto [&>svg]:w-full">
+        <HourlyBars width={520} height={120} />
+      </div>
       <table className="w-full">
-        <thead className="border-b border-[var(--ui-line)] bg-[#fafbfc]">
+        <thead className="border-y border-[var(--ui-line)] bg-[#fafbfc]">
           <tr>
-            <th className={th}>Country</th>
-            <th className={`${th} hidden text-right sm:table-cell`}>Clicks</th>
+            <th className={th}>Partner</th>
             <th className={`${th} text-right`}>Leads</th>
-            <th className={`${th} hidden text-right md:table-cell`}>CR</th>
-            <th className={`${th} text-right`}>FTDs</th>
-            <th className={`${th} hidden text-right sm:table-cell`}>EPC</th>
+            <th className={`${th} hidden text-right sm:table-cell`}>CR</th>
             <th className={`${th} text-right`}>Profit</th>
           </tr>
         </thead>
         <tbody className="ui-num divide-y divide-[var(--ui-line)]">
-          {DRILL.map((r) => (
-            <tr key={r.geo}>
-              <td className={`${td} font-medium`}>{r.geo}</td>
-              <td className={`${td} hidden text-right sm:table-cell`}>{r.clicks}</td>
-              <td className={`${td} text-right`}>{r.leads}</td>
-              <td className={`${td} hidden text-right md:table-cell`}>{r.cr}</td>
-              <td className={`${td} text-right`}>{r.ftd}</td>
-              <td className={`${td} ui-mono hidden text-right sm:table-cell`}>{r.epc}</td>
-              <td className={`${td} ui-mono text-right font-semibold text-[#1f7a43]`}>{r.profit}</td>
+          {PARTNERS.map((p) => (
+            <tr key={p.id}>
+              <td className={`${td} font-medium`}>{p.id}</td>
+              <td className={`${td} text-right`}>{p.leads}</td>
+              <td className={`${td} hidden text-right sm:table-cell`}>{p.cr}</td>
+              <td className={`${td} ui-mono text-right font-semibold text-[#1f7a43]`}>{p.profit}</td>
             </tr>
           ))}
         </tbody>

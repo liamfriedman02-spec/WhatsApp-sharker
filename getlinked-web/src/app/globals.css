@@ -107,7 +107,7 @@
   border-radius: 18px;
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 0.25),
-    0 50px 100px -30px rgb(5 15 50 / 0.55);
+    0 40px 80px -40px rgb(5 15 50 / 0.4);
 }
 
 /* The wordmark takes the text colour, so one file works on blue and on white. */

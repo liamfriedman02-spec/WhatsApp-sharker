@@ -9,7 +9,7 @@ const COLUMNS = [
       ['Lead distribution', '#distribution'],
       ['Lead Recycling', '#recycling'],
       ['Postbacks', '#postbacks'],
-      ['Reports', '#reports'],
+      ['Lead processing', '#processing'],
     ],
   },
   {

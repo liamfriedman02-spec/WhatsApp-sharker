@@ -6,7 +6,7 @@ The new marketing website for GetLinked.io, built separately from the production
 
 1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
 2. **How it works:** the lead's card travels along a track of stops, on a loop: tracked, validated, matched to a bucket, skipped by A (cap reached) and B (no budget), routed to C, recycled to D after four hours without a conversion, converted as an FTD, and paid out.
-3. **Platform:** in-depth sections for Tracking, Lead distribution, Lead Recycling, and Postbacks and integrations, then Reports, Affiliates and payouts, Finance and invoices, and Lead quality and monitoring. Each one has its own product screen.
+3. **Platform:** "Everything You Need to Run Your Affiliate Network." Four cards (Smart Lead Distribution, Automated Lead Recycling, High-Speed Lead Processing, Real-Time Tracking & Analytics), then postbacks, partner management, finance and monitoring. Every card shows a GetLinked screen instead of an icon.
 4. **Solutions:** Finance and iGaming.
 5. **Questions:** a short FAQ.
 6. **Closing CTA and footer.**

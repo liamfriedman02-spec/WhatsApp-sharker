@@ -3,6 +3,7 @@ import { SectionHeading } from './Section';
 
 const FEATURES = [
   ['Tracking', '#tracking'],
+  ['Lead processing', '#processing'],
   ['Lead distribution', '#distribution'],
   ['Caps and budgets', '#distribution'],
   ['Lead Recycling', '#recycling'],
@@ -12,7 +13,7 @@ const FEATURES = [
 
 export function Journey() {
   return (
-    <section id="journey" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="journey" className="scroll-mt-20 pb-20 pt-12 sm:pb-28 sm:pt-16">
       <div className="container-page">
         <SectionHeading kicker="How it works" title="One lead, from click to profit.">
           A click from Affiliate #214 becomes a lead, skips two advertisers that can’t take it, gets recycled when the first
