@@ -26,16 +26,18 @@ export function ButtonLink({
   variant = 'primary',
   size = 'md',
   className = '',
+  onClick,
   children,
 }: {
   href: string;
   variant?: Variant;
   size?: Size;
   className?: string;
+  onClick?: () => void;
   children: ReactNode;
 }) {
   return (
-    <a href={href} className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}>
+    <a href={href} onClick={onClick} className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}>
       {children}
     </a>
   );

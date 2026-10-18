@@ -33,6 +33,12 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
   body {
     background: var(--color-paper);
     color: var(--color-ink);

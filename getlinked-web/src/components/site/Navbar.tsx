@@ -100,7 +100,7 @@ export function Navbar() {
                 </li>
               ))}
             </ul>
-            <ButtonLink href={DEMO_URL} size="lg" className="mt-auto w-full">
+            <ButtonLink href={DEMO_URL} size="lg" className="mt-auto w-full" onClick={() => setOpen(false)}>
               Book a Demo
             </ButtonLink>
           </nav>

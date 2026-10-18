@@ -11,7 +11,8 @@ The new marketing website for GetLinked.io, built separately from the production
 5. **GetLinked Bot:** what the bot does (analyzes performance and suggests improvements, sends reports to Telegram, lets you control GetLinked from the chat), next to a sample Telegram conversation on a phone.
 6. **Industries:** Finance and iGaming.
 7. **Questions:** a short FAQ.
-8. **Closing CTA and footer.**
+8. **Book a demo:** the demo form (name, work email, company, Telegram, industry, monthly lead volume, message), what the demo covers, and a "Message us on Telegram" button. Every "Book a Demo" button on the page scrolls here.
+9. **Footer.**
 
 The dashboard is a React component styled like the real app, not an image, so text stays sharp. **Its figures are sample data.**
 
@@ -49,8 +50,8 @@ npm run export:preview   # writes ./out
 | Path | What it is |
 |---|---|
 | `src/app/` | Layout, metadata, global styles and design tokens (`globals.css`), self-hosted fonts |
-| `src/components/site/` | Navigation, logo, buttons, footer, page motion, and `links.ts` (the demo link) |
-| `src/components/home/` | The page sections: hero, why GetLinked, platform, solutions (pillars), GetLinked Bot, industries, FAQ, closing CTA |
+| `src/components/site/` | Navigation, logo, buttons, footer, page motion, and `links.ts` (demo form endpoint, Telegram link) |
+| `src/components/home/` | The page sections: hero, why GetLinked, platform, solutions (pillars), GetLinked Bot, industries, FAQ, demo form |
 | `src/components/product/` | The rebuilt GetLinked app: shell, dashboard, charts, icons |
 
 ## Behaviour
@@ -62,7 +63,8 @@ npm run export:preview   # writes ./out
 
 ## Before launch
 
-- **Demo link:** every "Book a Demo" button points to `https://getlinked.io/`. Set the real booking page in `src/components/site/links.ts`.
+- **Demo form:** set `NEXT_PUBLIC_DEMO_FORM_ENDPOINT` to the URL that should receive requests (a form service or a webhook). The form sends a `POST` with a JSON body: `name`, `email`, `company`, `telegram`, `vertical` (`Finance`, `iGaming` or `Both`), `volume`, `message` and `source`. Any 2xx response counts as sent. Until it is set, the form checks the fields and then tells the visitor that nothing was sent.
+- **Telegram:** `TELEGRAM_URL` in `src/components/site/links.ts` is a placeholder (`https://t.me/`). Replace it with GetLinked's real Telegram link.
 - **Logo:** `src/components/site/getlinked-logo.svg` and the "g" tab icon (`src/app/icon.svg`) are traced from a JPG of the logo. Replace them with the original vector files when available for perfectly clean edges.
 - **Numbers:** 300+ networks and 200+ features come from GetLinked. Confirm them before launch.
 - **GetLinked Bot:** the chat on the phone is a sample. Check the report contents and the `/cap` command against what the bot really supports.
