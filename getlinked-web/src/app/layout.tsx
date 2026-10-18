@@ -33,6 +33,8 @@ export const metadata: Metadata = {
     description: 'The most advanced affiliate management platform for Finance and iGaming.',
     type: 'website',
   },
+  // NOINDEX=1 keeps copies hosted away from getlinked.io (e.g. GitHub Pages) out of search results.
+  robots: process.env.NOINDEX === '1' ? { index: false, follow: false } : undefined,
 };
 
 export const viewport: Viewport = {

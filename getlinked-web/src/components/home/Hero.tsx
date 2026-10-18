@@ -37,7 +37,8 @@ export function Hero() {
       gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
         gsap
           .timeline({ defaults: { ease: 'power4.out' } })
-          .fromTo('[data-line]', { yPercent: 105 }, { yPercent: 0, duration: 1.1, stagger: 0.12 }, 0.1)
+          // y: 0 stops GSAP reading the CSS starting offset (translateY(105%)) as a fixed shift it keeps.
+          .fromTo('[data-line]', { y: 0, yPercent: 105 }, { y: 0, yPercent: 0, duration: 1.1, stagger: 0.12 }, 0.1)
           .fromTo('[data-intro]', { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.9, stagger: 0.08 }, 0.45)
           .fromTo('[data-frame]', { autoAlpha: 0, y: 70 }, { autoAlpha: 1, y: 0, duration: 1.4 }, 0.6);
 

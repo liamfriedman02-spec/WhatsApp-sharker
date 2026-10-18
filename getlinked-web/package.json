@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "export:preview": "STATIC_EXPORT=1 NEXT_PUBLIC_CONCEPT_BANNER=1 next build && node scripts/relativize-export.mjs"
+    "export:preview": "STATIC_EXPORT=1 NEXT_PUBLIC_CONCEPT_BANNER=1 next build && node scripts/relativize-export.mjs",
+    "export:pages": "STATIC_EXPORT=1 NOINDEX=1 next build && node scripts/relativize-export.mjs && touch out/.nojekyll"
   },
   "dependencies": {
     "@gsap/react": "2.1.2",

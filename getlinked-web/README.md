@@ -45,6 +45,16 @@ A static copy with a "design preview" banner, usable from any sub-folder:
 npm run export:preview   # writes ./out
 ```
 
+## Live copy on GitHub Pages
+
+The site is published at https://liamfriedman02-spec.github.io/WhatsApp-sharker/ from the `gh-pages` branch (Settings → Pages → Deploy from a branch → `gh-pages`, `/ (root)`). This copy has no preview banner and tells search engines not to index it, so it doesn't compete with getlinked.io.
+
+To update it, build and commit `./out` to `gh-pages`:
+
+```bash
+npm run export:pages     # writes ./out, with .nojekyll so GitHub serves the _next folder
+```
+
 ## Where things live
 
 | Path | What it is |
