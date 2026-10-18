@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,68408,t=>{t.q("./_next/static/media/getlinked-logo.0ghnd8a93y3yn.svg")}]);
