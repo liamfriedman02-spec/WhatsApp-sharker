@@ -4,10 +4,10 @@ The new marketing website for GetLinked.io, built separately from the production
 
 ## What's on the page
 
-1. **Hero:** the headline and both CTAs on the brand blue from the logo, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
+1. **Hero:** the headline and both CTAs on light emerald, with the GetLinked dashboard (rebuilt in code) resting on top of it. The dashboard appears only here.
 2. **Why GetLinked:** 300+ networks, 200+ features and real-time tracking in large numbers, then three reasons to choose GetLinked.
 3. **Platform:** "Everything You Need to Run Your Affiliate Network." A wall of twelve features with icons (routing, recycling, injection, caps and budgets, schedules, postbacks, partners, payouts, invoices, analytics, permissions, lead quality), and a line pointing to the 200+ in total.
-4. **Solutions:** "One platform. Three ways to grow." Three cards on the deep brand blue (CR Boost, Partner Platform, Lead Distribution), each with its own illustration and three features.
+4. **Solutions:** "One platform. Three ways to grow." Three cards on the emerald band (CR Boost, Partner Platform, Lead Distribution), each with its own illustration and three features.
 5. **GetLinked Bot:** what the bot does (analyzes performance and suggests improvements, sends reports to Telegram, lets you control GetLinked from the chat), next to a sample Telegram conversation on a phone.
 6. **Industries:** Finance and iGaming.
 7. **Questions:** a short FAQ.
@@ -19,7 +19,7 @@ The dashboard is a React component styled like the real app, not an image, so te
 
 - Next.js 16 (App Router) + TypeScript
 - Tailwind CSS 4
-- GSAP 3 (the hero's entrance)
+- GSAP 3 with ScrollTrigger (hero entrance, dashboard tilt, scroll reveals, counters, chat)
 
 All versions are pinned exactly in `package.json`.
 
@@ -49,16 +49,16 @@ npm run export:preview   # writes ./out
 | Path | What it is |
 |---|---|
 | `src/app/` | Layout, metadata, global styles and design tokens (`globals.css`), self-hosted fonts |
-| `src/components/site/` | Navigation, logo, buttons, footer, and `links.ts` (the demo link) |
+| `src/components/site/` | Navigation, logo, buttons, footer, page motion, and `links.ts` (the demo link) |
 | `src/components/home/` | The page sections: hero, why GetLinked, platform, solutions (pillars), GetLinked Bot, industries, FAQ, closing CTA |
 | `src/components/product/` | The rebuilt GetLinked app: shell, dashboard, charts, icons |
 
 ## Behaviour
 
-- **Colours:** the brand blue from the logo for the hero and closing CTA, light pages like the product itself, and green only for money and positive results. Tokens are in `globals.css`.
-- **Motion:** only the hero fades in once. Nothing else animates.
+- **Colours:** light emerald with champagne gold for the hero, the solutions band and the closing CTA; light mint-tinted pages elsewhere. Tokens are in `globals.css`. The previous blue design is tagged `design-blue` in git.
+- **Motion:** the hero headline slides in and the dashboard settles flat as you scroll. Sections rise into view, the 300+ and 200+ numbers count up, the solution illustrations move, and the bot's chat messages arrive one by one. All motion lives in `src/components/site/Motion.tsx` and the hero.
 - **Phones:** the dashboard bleeds off the right edge so it stays readable.
-- **Reduced motion:** the hero appears without the fade.
+- **Reduced motion:** nothing moves; everything is shown in its final state.
 
 ## Before launch
 

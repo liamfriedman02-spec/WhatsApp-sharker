@@ -55,9 +55,9 @@ const CAPABILITIES = [
   },
 ];
 
-function BotBubble({ children, time }: { children: ReactNode; time: string }) {
+function BotBubble({ children, time, msg = true }: { children: ReactNode; time: string; msg?: boolean }) {
   return (
-    <div className="mr-8 self-start rounded-[16px] rounded-bl-[6px] bg-white px-3 py-2 text-[12.5px] leading-snug text-[#0f1b2d] shadow-[0_1px_1px_rgb(0_0_0/0.08)]">
+    <div data-msg={msg || undefined} className="mr-8 self-start rounded-[16px] rounded-bl-[6px] bg-white px-3 py-2 text-[12.5px] leading-snug text-[#0f1b2d] shadow-[0_1px_1px_rgb(0_0_0/0.08)]">
       {children}
       <span className="mt-0.5 block text-right text-[10px] text-[#8a98a8]">{time}</span>
     </div>
@@ -66,7 +66,7 @@ function BotBubble({ children, time }: { children: ReactNode; time: string }) {
 
 function UserBubble({ children, time }: { children: ReactNode; time: string }) {
   return (
-    <div className="ml-10 self-end rounded-[16px] rounded-br-[6px] bg-[#e1f7d0] px-3 py-2 text-[12.5px] leading-snug text-[#0f1b2d] shadow-[0_1px_1px_rgb(0_0_0/0.08)]">
+    <div data-msg className="ml-10 self-end rounded-[16px] rounded-br-[6px] bg-[#e1f7d0] px-3 py-2 text-[12.5px] leading-snug text-[#0f1b2d] shadow-[0_1px_1px_rgb(0_0_0/0.08)]">
       {children}
       <span className="mt-0.5 flex items-center justify-end gap-1 text-[10px] text-[#4fae4e]">
         {time}
@@ -82,18 +82,18 @@ function UserBubble({ children, time }: { children: ReactNode; time: string }) {
 function TelegramPhone() {
   return (
     <div className="relative mx-auto w-full max-w-[372px]">
-      <div aria-hidden="true" className="absolute -inset-10 rounded-full bg-[radial-gradient(closest-side,rgb(47_91_234/0.22),transparent)]" />
+      <div aria-hidden="true" className="absolute -inset-10 rounded-full bg-[radial-gradient(closest-side,rgb(15_127_92/0.22),transparent)]" />
       <div
         role="img"
         aria-label="Sample Telegram chat: GetLinked Bot sends a daily report, suggests moving traffic from Advertiser C to Advertiser D, and confirms the change and a new cap"
-        className="relative rounded-[46px] bg-[#0c1838] p-[10px] shadow-[0_50px_100px_-40px_rgb(14_34_95/0.6)]"
+        className="relative rounded-[46px] bg-[#0a1f18] p-[10px] shadow-[0_50px_100px_-40px_rgb(5_38_28/0.6)]"
       >
         <div aria-hidden="true" className="overflow-hidden rounded-[37px] bg-[#dfe6ee]">
           {/* Status bar and chat header */}
           <div className="bg-white px-5 pb-2.5 pt-3">
             <div className="flex items-center justify-between text-[11px] font-semibold text-[#0f1b2d]">
               <span>9:41</span>
-              <span className="h-[22px] w-[86px] rounded-full bg-[#0c1838]" />
+              <span className="h-[22px] w-[86px] rounded-full bg-[#0a1f18]" />
               <span className="flex items-center gap-1">
                 <svg viewBox="0 0 18 12" className="h-2.5 w-4" fill="currentColor">
                   <rect x="0" y="8" width="3" height="4" rx="1" />
@@ -110,7 +110,7 @@ function TelegramPhone() {
               <svg viewBox="0 0 10 16" className="h-4 w-2.5 text-[#2aabee]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 2L2 8l6 6" />
               </svg>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(180deg,#2f5bea,#1c3fa6)] font-display text-[17px] font-bold text-white">g</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(180deg,#0f7f5c,#05261c)] font-display text-[17px] font-bold text-white">g</span>
               <span className="min-w-0">
                 <span className="block text-[13.5px] font-semibold text-[#0f1b2d]">GetLinked Bot</span>
                 <span className="block text-[11px] text-[#8a98a8]">bot</span>
@@ -119,7 +119,7 @@ function TelegramPhone() {
           </div>
 
           {/* Messages */}
-          <div className="flex flex-col gap-2 bg-[radial-gradient(rgb(255_255_255/0.5)_1px,transparent_1px)] bg-[size:14px_14px] px-3 py-3">
+          <div data-chat className="flex flex-col gap-2 bg-[radial-gradient(rgb(255_255_255/0.5)_1px,transparent_1px)] bg-[size:14px_14px] px-3 py-3">
             <span className="self-center rounded-full bg-black/15 px-2.5 py-0.5 text-[10.5px] font-medium text-white">Today</span>
 
             <BotBubble time="09:00">
@@ -134,8 +134,8 @@ function TelegramPhone() {
               </span>
             </BotBubble>
 
-            <div className="mr-8 flex flex-col gap-1 self-start">
-              <BotBubble time="11:24">
+            <div data-msg className="mr-8 flex flex-col gap-1 self-start">
+              <BotBubble time="11:24" msg={false}>
                 <span className="block font-semibold">Suggestion</span>
                 Advertiser C converts 1.2% on CA · Finance today, down from 2.1%. Advertiser D converts 1.9% on the same traffic.
               </BotBubble>
@@ -190,8 +190,8 @@ export function BotSection() {
 
           <ul className="mt-10 space-y-7">
             {CAPABILITIES.map((c) => (
-              <li key={c.title} className="grid grid-cols-[44px_1fr] gap-x-4">
-                <span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-mist text-bright">{c.icon}</span>
+              <li key={c.title} data-reveal className="grid grid-cols-[44px_1fr] gap-x-4">
+                <span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-tint text-accent">{c.icon}</span>
                 <span>
                   <span className="block text-[1.125rem] font-semibold tracking-[-0.01em] text-ink">{c.title}</span>
                   <span className="mt-1 block max-w-[30rem] text-[1rem] leading-relaxed text-muted">{c.body}</span>

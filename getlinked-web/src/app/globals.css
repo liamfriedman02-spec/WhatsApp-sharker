@@ -1,18 +1,20 @@
 @import 'tailwindcss';
 
-/* GetLinked design tokens. The brand blue comes from the logo; pages are light, like the product. */
+/* GetLinked design tokens: a fresh, light emerald with a champagne-gold accent; pages carry a faint mint tint. */
 @theme {
-  --color-paper: #f5f7fc;
-  --color-mist: #eaeff9;
-  --color-ink: #0c1838;
-  --color-muted: #52607d;
-  --color-faint: #8590a8;
-  --color-line: #dde3ee;
-  --color-deep: #0e225f;
-  --color-royal: #1c3fa6;
-  --color-bright: #2f5bea;
-  --color-sky: #b7caff;
-  --color-money: #149a55;
+  --color-paper: #f2f8f4;
+  --color-tint: #def1e6;
+  --color-ink: #0c2219;
+  --color-muted: #4a5f56;
+  --color-faint: #839790;
+  --color-line: #d6e6dc;
+  --color-deep: #0a4a37;
+  --color-brand: #0b6448;
+  --color-accent: #0e7d5a;
+  --color-pale: #d4f1e2;
+  --color-gold: #d9bb7c;
+  --color-gold-hi: #f4e4b8;
+  --color-money: #12935f;
   --color-amber: #c77a07;
   --color-violet: #6a4ddb;
 
@@ -43,11 +45,11 @@
   }
 
   ::selection {
-    background: rgb(47 91 234 / 0.2);
+    background: rgb(14 125 90 / 0.2);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-bright);
+    outline: 2px solid var(--color-accent);
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -75,12 +77,53 @@
 
 /* ---------- Brand surfaces ---------- */
 
-/* The logo's blue: used for the hero and the closing call to action. */
-.brand-blue {
+/* Light emerald with a soft gold light: the hero, the solutions band and the closing call to action. */
+.brand-surface {
   background:
-    radial-gradient(60% 55% at 50% 0%, rgb(120 160 255 / 0.35), transparent 70%),
-    radial-gradient(40% 40% at 85% 60%, rgb(80 120 255 / 0.25), transparent 70%),
-    linear-gradient(170deg, var(--color-deep) 0%, var(--color-royal) 62%, #2650cf 100%);
+    radial-gradient(55% 50% at 50% 0%, rgb(140 236 190 / 0.3), transparent 70%),
+    radial-gradient(35% 40% at 88% 70%, rgb(244 228 184 / 0.22), transparent 70%),
+    radial-gradient(40% 45% at 8% 85%, rgb(36 170 120 / 0.35), transparent 70%),
+    linear-gradient(165deg, #0a5c44 0%, #0f7a59 45%, #16936b 100%);
+}
+
+/* A slow drifting light over the dark surfaces. */
+.brand-glow {
+  background: radial-gradient(40% 50% at 50% 50%, rgb(244 228 184 / 0.2), transparent 70%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-glow {
+    animation: glow-drift 18s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes glow-drift {
+  from {
+    transform: translate(-25%, -10%);
+  }
+  to {
+    transform: translate(25%, 15%);
+  }
+}
+
+/* Champagne gold, for the main call to action on dark surfaces. */
+.btn-gold {
+  background: linear-gradient(180deg, #fbf0d2, var(--color-gold));
+  color: #2a2008;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    0 12px 30px -12px rgb(60 40 0 / 0.45);
+}
+
+.btn-gold:hover {
+  background: linear-gradient(180deg, #fff6de, #e3c78c);
+}
+
+.text-gold-fill {
+  background: linear-gradient(180deg, #fff4d8, var(--color-gold-hi));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .brand-grid::after {
@@ -97,7 +140,7 @@
 }
 
 .headline-fill {
-  background: linear-gradient(180deg, #ffffff 45%, #dbe5ff 100%);
+  background: linear-gradient(180deg, #ffffff 50%, #e2f6ec 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -106,8 +149,8 @@
 .hero-frame {
   border-radius: 18px;
   box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.25),
-    0 40px 80px -40px rgb(5 15 50 / 0.4);
+    0 0 0 1px rgb(255 255 255 / 0.4),
+    0 40px 80px -40px rgb(4 48 34 / 0.5);
 }
 
 /* The wordmark takes the text colour, so one file works on blue and on white. */
@@ -122,12 +165,19 @@
   mask-size: contain;
 }
 
+/* Moving parts inside illustrations; hidden for visitors who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .svg-motion {
+    display: none;
+  }
+}
+
 /* Product screens on the light page. */
 .screen {
   border-radius: 16px;
   box-shadow:
-    0 0 0 1px #e1e6f0,
-    0 30px 60px -32px rgb(14 34 95 / 0.35);
+    0 0 0 1px #dfe7e2,
+    0 30px 60px -32px rgb(5 38 28 / 0.35);
 }
 
 .nav-in {
@@ -147,12 +197,17 @@
     opacity: 0;
     animation: reveal-failsafe 0.6s ease 3.5s forwards;
   }
+  html.js [data-line] {
+    transform: translateY(105%);
+    animation: reveal-failsafe 0.6s ease 3.5s forwards;
+  }
 }
 
 @keyframes reveal-failsafe {
   to {
     opacity: 1;
     visibility: visible;
+    transform: none;
   }
 }
 

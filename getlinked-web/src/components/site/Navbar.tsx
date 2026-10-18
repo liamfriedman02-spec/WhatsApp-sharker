@@ -42,7 +42,7 @@ export function Navbar() {
   return (
     <header
       className={`nav-in fixed inset-x-0 top-[var(--banner-h,0px)] z-50 border-b transition-[background-color,border-color,color,box-shadow] duration-500 ${
-        solid ? 'border-line bg-white/90 text-deep shadow-[0_8px_30px_-20px_rgb(14_34_95/0.4)] backdrop-blur-xl' : 'border-transparent bg-transparent text-white'
+        solid ? 'border-line bg-white/90 text-deep shadow-[0_8px_30px_-20px_rgb(5_38_28/0.35)] backdrop-blur-xl' : 'border-transparent bg-transparent text-white'
       }`}
     >
       <div className="container-page flex h-16 items-center gap-6 lg:h-[72px]">
@@ -55,7 +55,7 @@ export function Navbar() {
                 <a
                   href={link.href}
                   className={`rounded-lg px-3.5 py-2 text-[0.9375rem] font-medium transition-colors duration-200 ${
-                    solid ? 'text-muted hover:bg-mist hover:text-ink' : 'text-white/80 hover:bg-white/10 hover:text-white'
+                    solid ? 'text-muted hover:bg-tint hover:text-ink' : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {link.label}
@@ -66,7 +66,7 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          <ButtonLink href={DEMO_URL} size="sm" variant={solid ? 'primary' : 'white'} className="hidden sm:inline-flex">
+          <ButtonLink href={DEMO_URL} size="sm" variant={solid ? 'primary' : 'gold'} className="hidden sm:inline-flex">
             Book a Demo
           </ButtonLink>
           <button

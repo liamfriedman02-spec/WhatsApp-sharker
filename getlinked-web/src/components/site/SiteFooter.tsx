@@ -34,7 +34,7 @@ export function SiteFooter() {
       <div className="container-page grid gap-12 py-16 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div>
           <Logo className="h-7" />
-          <p className="mt-5 max-w-[22rem] text-[0.9375rem] leading-relaxed text-sky/80">
+          <p className="mt-5 max-w-[22rem] text-[0.9375rem] leading-relaxed text-pale/80">
             Affiliate tracking, lead distribution and network management for Finance and iGaming.
           </p>
         </div>
@@ -44,7 +44,7 @@ export function SiteFooter() {
             <ul className="mt-4 space-y-2.5">
               {col.links.map(([label, href]) => (
                 <li key={label}>
-                  <a href={href} className="text-[0.9375rem] text-sky/80 transition-colors hover:text-white">
+                  <a href={href} className="text-[0.9375rem] text-pale/80 transition-colors hover:text-white">
                     {label}
                   </a>
                 </li>
@@ -53,7 +53,7 @@ export function SiteFooter() {
           </nav>
         ))}
       </div>
-      <div className="container-page flex flex-col gap-2 border-t border-white/10 py-6 text-[0.8125rem] text-sky/60 sm:flex-row">
+      <div className="container-page flex flex-col gap-2 border-t border-white/10 py-6 text-[0.8125rem] text-pale/60 sm:flex-row">
         <p>© {new Date().getFullYear()} GetLinked</p>
         <p className="sm:ml-auto">Product screens show sample data.</p>
       </div>

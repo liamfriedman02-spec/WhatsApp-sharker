@@ -145,23 +145,27 @@ export function Platform() {
         <div className="mt-14 overflow-hidden rounded-[28px] ring-1 ring-line sm:mt-16">
           <ul className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f) => (
-              <li key={f.title} id={f.id} className="flex scroll-mt-28 gap-4 bg-white px-5 py-5 transition-colors duration-300 hover:bg-paper sm:block sm:p-7">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-mist text-bright">{f.icon}</span>
-                <span className="block min-w-0">
-                  <h3 className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink sm:mt-5">{f.title}</h3>
-                  <p className="mt-1 text-[0.9375rem] leading-relaxed text-muted sm:mt-1.5">{f.body}</p>
-                </span>
+              <li key={f.title} id={f.id} className="group scroll-mt-28 bg-white transition-colors duration-300 hover:bg-paper">
+                <div data-reveal className="flex gap-4 px-5 py-5 sm:block sm:p-7">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-tint text-accent transition-[background-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:bg-brand group-hover:text-gold-hi">
+                    {f.icon}
+                  </span>
+                  <span className="block min-w-0">
+                    <h3 className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-ink sm:mt-5">{f.title}</h3>
+                    <p className="mt-1 text-[0.9375rem] leading-relaxed text-muted sm:mt-1.5">{f.body}</p>
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
           <div className="flex flex-col gap-4 border-t border-line bg-paper px-6 py-6 sm:flex-row sm:items-center sm:px-7">
             <p className="text-[1rem] text-ink">
-              <span className="font-display text-[1.25rem] font-semibold tracking-[-0.02em] text-royal">200+</span>
+              <span data-count="200" data-suffix="+" className="font-display text-[1.25rem] font-semibold tracking-[-0.02em] text-brand tabular-nums">200+</span>
               <span className="ml-2 font-medium">features in total, built for Finance and iGaming.</span>
             </p>
             <a
               href={DEMO_URL}
-              className="group inline-flex items-center gap-1.5 text-[0.9375rem] font-semibold text-royal transition-colors hover:text-bright sm:ml-auto"
+              className="group inline-flex items-center gap-1.5 text-[0.9375rem] font-semibold text-brand transition-colors hover:text-accent sm:ml-auto"
             >
               See them all in a demo
               <svg viewBox="0 0 16 16" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

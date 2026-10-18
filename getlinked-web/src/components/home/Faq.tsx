@@ -41,7 +41,7 @@ export function Faq() {
             <details key={item.q} className="group py-1">
               <summary className="flex cursor-pointer list-none items-center gap-4 py-5 text-[1.0625rem] font-semibold text-ink marker:hidden [&::-webkit-details-marker]:hidden">
                 {item.q}
-                <svg viewBox="0 0 16 16" className="ml-auto h-4 w-4 shrink-0 text-bright transition-transform duration-300 group-open:rotate-45" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <svg viewBox="0 0 16 16" className="ml-auto h-4 w-4 shrink-0 text-accent transition-transform duration-300 group-open:rotate-45" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
                   <path d="M8 3v10M3 8h10" />
                 </svg>
               </summary>

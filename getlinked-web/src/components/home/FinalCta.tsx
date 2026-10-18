@@ -5,16 +5,17 @@ export function FinalCta() {
   return (
     <section id="demo" className="scroll-mt-20 py-24 sm:py-32">
       <div className="container-page">
-        <div className="brand-blue brand-grid relative overflow-hidden rounded-[32px] px-6 py-20 text-center text-white sm:px-12 sm:py-28">
+        <div data-reveal className="brand-surface brand-grid relative overflow-hidden rounded-[32px] px-6 py-20 text-center text-white sm:px-12 sm:py-28">
+          <div aria-hidden="true" className="brand-glow pointer-events-none absolute inset-0" />
           <div className="relative">
             <h2 className="headline-fill mx-auto max-w-[18ch] font-display text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.03] tracking-[-0.038em] [text-wrap:balance]">
               Take control of your entire network.
             </h2>
-            <p className="mx-auto mt-6 max-w-[34rem] text-[1.0625rem] leading-relaxed text-sky sm:text-[1.125rem]">
+            <p className="mx-auto mt-6 max-w-[34rem] text-[1.0625rem] leading-relaxed text-white/90 sm:text-[1.125rem]">
               See tracking, lead distribution, Lead Recycling and reporting set up around the way your network works today.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <ButtonLink href={DEMO_URL} variant="white" size="hero">
+              <ButtonLink href={DEMO_URL} variant="gold" size="hero">
                 Book a Demo
               </ButtonLink>
               <ButtonLink href="#platform" variant="outlineLight" size="hero">

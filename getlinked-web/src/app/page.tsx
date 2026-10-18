@@ -7,6 +7,7 @@ import { Platform } from '@/components/home/Platform';
 import { Solutions } from '@/components/home/Solutions';
 import { WhyGetLinked } from '@/components/home/WhyGetLinked';
 import { ConceptBanner } from '@/components/site/ConceptBanner';
+import { Motion } from '@/components/site/Motion';
 import { Navbar } from '@/components/site/Navbar';
 import { SiteFooter } from '@/components/site/SiteFooter';
 
@@ -26,6 +27,7 @@ export default function HomePage() {
         <FinalCta />
       </main>
       <SiteFooter />
+      <Motion />
     </>
   );
 }

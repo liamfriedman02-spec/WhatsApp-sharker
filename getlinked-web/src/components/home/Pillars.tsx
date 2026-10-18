@@ -2,16 +2,31 @@ import type { ReactNode } from 'react';
 import { DEMO_URL } from '@/components/site/links';
 
 const C = {
-  royal: '#1c3fa6',
-  bright: '#2f5bea',
-  sky: '#b7caff',
-  mist: '#e6ecff',
-  line: '#d6deef',
-  money: '#149a55',
+  brand: '#0b6448',
+  accent: '#0e7d5a',
+  pale: '#a6dcc2',
+  tint: '#def1e6',
+  line: '#d0e3d8',
+  money: '#12935f',
+  gold: '#d2ae62',
   violet: '#6a4ddb',
   amber: '#c77a07',
   slate: '#98a2b3',
 };
+
+/** A dot that travels along a path, on a loop. Hidden when the visitor prefers reduced motion. */
+function Traveller({ path, dur, begin = '0s', r = 3.5, color }: { path: string; dur: string; begin?: string; r?: number; color: string }) {
+  return (
+    <g className="svg-motion">
+      <circle r={r * 2.4} fill={color} opacity="0.18">
+        <animateMotion dur={dur} begin={begin} repeatCount="indefinite" path={path} />
+      </circle>
+      <circle r={r} fill={color}>
+        <animateMotion dur={dur} begin={begin} repeatCount="indefinite" path={path} />
+      </circle>
+    </g>
+  );
+}
 
 /** A small person: head and shoulders inside a coloured circle. */
 function Person({ x, y, r, bg }: { x: number; y: number; r: number; bg: string }) {
@@ -41,7 +56,7 @@ function Tag({ x, y, w, text, color }: { x: number; y: number; w: number; text: 
 function BoostArt() {
   const chips = [
     { y: 40, dot: C.slate },
-    { y: 78, dot: C.bright },
+    { y: 78, dot: C.accent },
     { y: 116, dot: C.slate },
   ];
   return (
@@ -52,7 +67,7 @@ function BoostArt() {
         </marker>
       </defs>
       {chips.map((c) => (
-        <path key={c.y} d={`M96 ${c.y + 11} C126 ${c.y + 11}, 128 88, 150 88`} fill="none" stroke={C.sky} strokeWidth="2" />
+        <path key={c.y} d={`M96 ${c.y + 11} C126 ${c.y + 11}, 128 88, 150 88`} fill="none" stroke={C.pale} strokeWidth="2" />
       ))}
       <path d="M214 88 H236" stroke={C.money} strokeWidth="2.4" strokeLinecap="round" />
       <path d="M165 55 C165 14, 70 12, 58 32" fill="none" stroke={C.violet} strokeWidth="1.8" strokeDasharray="4 4" markerEnd="url(#pl-arrow-v)" />
@@ -66,11 +81,19 @@ function BoostArt() {
       <circle cx={182} cy={88} r={34} fill="#fff" stroke={C.violet} strokeWidth="3" />
       <circle cx={182} cy={88} r={24} fill="#efeaff" />
       <g transform="translate(170 76)" fill="none" stroke={C.violet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
-        <path d="M4 3.5V8h4.5" />
-        <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
-        <path d="M20 20.5V16h-4.5" />
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="6s" repeatCount="indefinite" />
+          <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
+          <path d="M4 3.5V8h4.5" />
+          <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
+          <path d="M20 20.5V16h-4.5" />
+        </g>
       </g>
+      {chips.map((c, i) => (
+        <Traveller key={`t${c.y}`} path={`M96 ${c.y + 11} C126 ${c.y + 11}, 128 88, 150 88`} dur="2.4s" begin={`${i * 0.8}s`} r={3} color={c.dot === C.slate ? C.violet : C.accent} />
+      ))}
+      <Traveller path="M165 55 C165 14, 70 12, 58 32" dur="3.2s" begin="0.4s" r={3} color={C.violet} />
+      <Traveller path="M214 88 H236" dur="1.6s" r={3} color={C.money} />
       <rect x={236} y={52} width={66} height={72} rx={14} fill="#fff" stroke={C.line} />
       <circle cx={252} cy={68} r={8} fill={C.money} />
       <path d="M248.5 68.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -86,42 +109,48 @@ function BoostArt() {
 /** Partner Platform: affiliates and advertisers around GetLinked, under one set of permissions. */
 function PartnersArt() {
   const left = [
-    { x: 64, y: 50, bg: C.bright },
+    { x: 64, y: 50, bg: C.accent },
     { x: 64, y: 118, bg: C.violet },
   ];
   const right = [
-    { x: 256, y: 50, bg: C.money },
-    { x: 256, y: 118, bg: '#d68a10' },
+    { x: 256, y: 50, bg: C.gold },
+    { x: 256, y: 118, bg: '#2f6fb0' },
   ];
   return (
     <svg viewBox="0 0 320 170" className="h-full w-full" aria-hidden="true">
       <defs>
         <linearGradient id="pl-core" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#4f7bff" stopOpacity="0.55" />
-          <stop offset="1" stopColor={C.royal} stopOpacity="0" />
+          <stop offset="0" stopColor="#2fae80" stopOpacity="0.55" />
+          <stop offset="1" stopColor={C.brand} stopOpacity="0" />
         </linearGradient>
       </defs>
       {[...left, ...right].map((p) => (
-        <path key={`${p.x}-${p.y}`} d={`M${p.x} ${p.y} L160 84`} stroke={C.sky} strokeWidth="2" />
+        <path key={`${p.x}-${p.y}`} d={`M${p.x} ${p.y} L160 84`} stroke={C.pale} strokeWidth="2" />
       ))}
-      <path d="M160 84 L160 26" stroke={C.sky} strokeWidth="2" />
-      <rect x={130} y={56} width={60} height={56} rx={16} fill={C.royal} />
+      <path d="M160 84 L160 26" stroke={C.pale} strokeWidth="2" />
+      {[...left, ...right].map((p, i) => (
+        <Traveller key={`t${p.x}-${p.y}`} path={i % 2 ? `M160 84 L${p.x} ${p.y}` : `M${p.x} ${p.y} L160 84`} dur="2.2s" begin={`${i * 0.55}s`} r={2.8} color={i < 2 ? C.accent : C.gold} />
+      ))}
+      <rect x={124} y={50} width={72} height={68} rx={20} fill="none" stroke={C.accent} strokeWidth="1.5" className="svg-motion">
+        <animate attributeName="opacity" values="0.6;0;0.6" dur="2.8s" repeatCount="indefinite" />
+      </rect>
+      <rect x={130} y={56} width={60} height={56} rx={16} fill={C.brand} />
       <rect x={130} y={56} width={60} height={56} rx={16} fill="url(#pl-core)" />
       <text x={160} y={94} textAnchor="middle" fontSize="30" fontWeight="700" fill="#fff" style={{ fontFamily: 'var(--font-display)' }}>
         g
       </text>
-      <Person x={160} y={24} r={14} bg={C.sky} />
+      <Person x={160} y={24} r={14} bg={C.pale} />
       {left.map((p) => (
         <Person key={`l${p.y}`} {...p} r={17} />
       ))}
       {right.map((p) => (
         <Person key={`r${p.y}`} {...p} r={17} />
       ))}
-      <Tag x={18} y={140} w={64} text="Affiliate" color={C.bright} />
+      <Tag x={18} y={140} w={64} text="Affiliate" color={C.accent} />
       <Tag x={230} y={140} w={74} text="Advertiser" color={C.money} />
       <g>
         <rect x={115} y={134} width={90} height={22} rx={11} fill="#fff" stroke={C.line} />
-        <path d="M128 139.5l6 2.2v4c0 3.4-2.6 5.6-6 6.8-3.4-1.2-6-3.4-6-6.8v-4z" fill={C.mist} stroke={C.bright} strokeWidth="1.3" strokeLinejoin="round" />
+        <path d="M128 139.5l6 2.2v4c0 3.4-2.6 5.6-6 6.8-3.4-1.2-6-3.4-6-6.8v-4z" fill={C.tint} stroke={C.accent} strokeWidth="1.3" strokeLinejoin="round" />
         <text x={139} y={148.5} fontSize="9" fontWeight="600" fill="#33405c" style={{ fontFamily: 'var(--font-sans)' }}>
           Permissions
         </text>
@@ -134,15 +163,19 @@ function PartnersArt() {
 function RoutingArt() {
   return (
     <svg viewBox="0 0 320 170" className="h-full w-full" aria-hidden="true">
-      <path d="M56 85 H112" stroke={C.bright} strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M56 85 H112" stroke={C.accent} strokeWidth="2.6" strokeLinecap="round" />
       <path d="M150 85 C190 85, 196 36, 238 36" fill="none" stroke={C.amber} strokeWidth="2" strokeDasharray="4 4" opacity="0.7" />
       <path d="M150 85 H238" stroke={C.money} strokeWidth="3" strokeLinecap="round" />
       <path d="M150 85 C190 85, 196 134, 238 134" fill="none" stroke={C.slate} strokeWidth="2" strokeDasharray="4 4" opacity="0.6" />
-      <circle cx={40} cy={85} r={22} fill={C.bright} opacity="0.14" />
-      <circle cx={40} cy={85} r={9} fill={C.bright} />
+      <circle cx={40} cy={85} r={22} fill={C.accent} opacity="0.14">
+        <animate attributeName="r" values="16;24;16" dur="2.4s" repeatCount="indefinite" />
+      </circle>
+      <Traveller path="M40 85 H238" dur="2.4s" r={3.2} color={C.money} />
+      <Traveller path="M150 85 C190 85, 196 36, 238 36" dur="3s" begin="0.6s" r={2.6} color={C.amber} />
+      <circle cx={40} cy={85} r={9} fill={C.accent} />
       <circle cx={40} cy={85} r={4} fill="#fff" />
       <rect x={112} y={65} width={40} height={40} rx={12} fill="#fff" stroke={C.line} />
-      <g transform="translate(120 73)" fill="none" stroke={C.bright} strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round">
+      <g transform="translate(120 73)" fill="none" stroke={C.accent} strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round">
         <path d="M12 3l9 4.5-9 4.5-9-4.5z" />
         <path d="M3 12l9 4.5 9-4.5" />
         <path d="M3 16.5L12 21l9-4.5" opacity="0.5" />
@@ -238,7 +271,7 @@ const PILLARS = [
   },
   {
     name: 'Partner Platform',
-    dot: C.bright,
+    dot: C.accent,
     title: 'Your Entire Network. Under Control.',
     body: 'Run your affiliate business from one powerful dashboard.',
     art: <PartnersArt />,
@@ -264,36 +297,33 @@ const PILLARS = [
   },
 ];
 
-/** Three ways GetLinked grows a network, on the deep brand blue. */
+/** Three ways GetLinked grows a network, on the deep brand surface. */
 export function Pillars() {
   return (
-    <section id="grow" className="relative scroll-mt-20 overflow-hidden bg-deep py-24 text-white sm:py-32">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_45%_at_15%_0%,rgb(79_123_255/0.35),transparent_70%),radial-gradient(45%_40%_at_90%_100%,rgb(47_91_234/0.3),transparent_70%)]"
-      />
+    <section id="grow" className="brand-surface relative scroll-mt-20 overflow-hidden py-24 text-white sm:py-32">
+      <div aria-hidden="true" className="brand-glow pointer-events-none absolute inset-0" />
       <div aria-hidden="true" className="brand-grid pointer-events-none absolute inset-0" />
 
       <div className="container-page relative">
         <div className="max-w-[46rem]">
-          <p className="text-[0.9375rem] font-semibold text-sky">Solutions</p>
+          <p className="text-[0.9375rem] font-semibold text-gold-hi">Solutions</p>
           <h2 className="headline-fill mt-3 font-display text-[clamp(2rem,4.2vw,3.25rem)] font-semibold leading-[1.04] tracking-[-0.035em] [text-wrap:balance]">
             One platform. Three ways to grow.
           </h2>
-          <p className="mt-5 max-w-[38rem] text-[1.0625rem] leading-relaxed text-sky sm:text-[1.125rem]">
+          <p className="mt-5 max-w-[38rem] text-[1.0625rem] leading-relaxed text-white/90 sm:text-[1.125rem]">
             Manage your partners, distribute traffic intelligently, and turn more leads into conversions.
           </p>
         </div>
 
         <div className="mt-14 grid gap-5 sm:mt-16 lg:grid-cols-3">
           {PILLARS.map((p) => (
-            <article key={p.name} className="flex flex-col rounded-[28px] bg-white p-3 text-ink shadow-[0_40px_80px_-40px_rgb(3_10_40/0.7)]">
-              <div className="h-[190px] rounded-[20px] bg-[radial-gradient(rgb(47_91_234/0.1)_1px,transparent_1px),linear-gradient(180deg,#eef3ff,#f6f8fd)] bg-[size:16px_16px,auto] px-2 py-3">
+            <article key={p.name} data-reveal className="flex flex-col rounded-[28px] bg-white p-3 text-ink shadow-[0_40px_80px_-40px_rgb(3_40_28/0.6)] transition-transform duration-500 ease-out-expo hover:-translate-y-1.5">
+              <div className="h-[190px] rounded-[20px] bg-[radial-gradient(rgb(15_127_92/0.12)_1px,transparent_1px),linear-gradient(180deg,#e7f3ec,#f5f9f7)] bg-[size:16px_16px,auto] px-2 py-3">
                 {p.art}
               </div>
 
               <div className="flex flex-1 flex-col px-4 pb-4 pt-6 sm:px-5">
-                <span className="inline-flex items-center gap-2 self-start rounded-full bg-mist px-3 py-1 text-[0.8125rem] font-semibold text-royal">
+                <span className="inline-flex items-center gap-2 self-start rounded-full bg-tint px-3 py-1 text-[0.8125rem] font-semibold text-brand">
                   <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: p.dot }} />
                   {p.name}
                 </span>
@@ -303,7 +333,7 @@ export function Pillars() {
                 <ul className="mt-6 space-y-5 border-t border-line pt-6">
                   {p.features.map((f) => (
                     <li key={f.title} className="grid grid-cols-[36px_1fr] gap-x-3.5">
-                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[11px] bg-mist text-bright">{f.icon}</span>
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[11px] bg-tint text-accent">{f.icon}</span>
                       <span>
                         <span className="block text-[1rem] font-semibold tracking-[-0.01em]">{f.title}</span>
                         <span className="mt-0.5 block text-[0.9375rem] leading-snug text-muted">{f.body}</span>
@@ -314,7 +344,7 @@ export function Pillars() {
 
                 <a
                   href={DEMO_URL}
-                  className="group mt-auto inline-flex items-center gap-1.5 self-start pt-8 text-[0.9375rem] font-semibold text-royal transition-colors hover:text-bright"
+                  className="group mt-auto inline-flex items-center gap-1.5 self-start pt-8 text-[0.9375rem] font-semibold text-brand transition-colors hover:text-accent"
                 >
                   {p.cta}
                   <svg viewBox="0 0 16 16" className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -8,7 +8,7 @@ const VERTICALS = [
     body: 'Crypto, investing and trading offers live on lead quality and timing. Route each lead by GEO and working hours, cap advertisers per day, and give unconverted leads a second buyer.',
     tags: ['Crypto', 'Investing', 'Trading'],
     points: ['GEO and schedule routing', 'Daily caps per advertiser', 'FTD and deposit tracking', 'Lead Recycling'],
-    glow: 'rgb(47 91 234 / 0.16)',
+    glow: 'rgb(15 127 92 / 0.16)',
   },
   {
     id: 'igaming',
@@ -17,7 +17,7 @@ const VERTICALS = [
     body: 'Track players from the first click to their first deposit, pay every affiliate on the deal you agreed, and see which partners and countries actually make you money.',
     tags: ['Casino', 'Sportsbook'],
     points: ['CPA, RevShare and hybrid deals', 'FTD tracking by postback', 'Affiliate and sub ID reports', 'Profit per affiliate and country'],
-    glow: 'rgb(20 154 85 / 0.14)',
+    glow: 'rgb(201 168 101 / 0.2)',
   },
 ];
 
@@ -29,9 +29,10 @@ export function Solutions() {
         <div className="mt-14 grid gap-5 lg:grid-cols-2">
           {VERTICALS.map((v) => (
             <article
+              data-reveal
               key={v.id}
               id={v.id}
-              className="relative scroll-mt-28 overflow-hidden rounded-[28px] bg-white p-7 shadow-[0_30px_60px_-40px_rgb(14_34_95/0.35)] ring-1 ring-inset ring-line sm:p-10"
+              className="relative scroll-mt-28 overflow-hidden rounded-[28px] bg-white p-7 shadow-[0_30px_60px_-40px_rgb(5_38_28/0.3)] ring-1 ring-inset ring-line sm:p-10"
             >
               <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl" style={{ background: v.glow }} />
               <div className="relative">
@@ -39,7 +40,7 @@ export function Solutions() {
                   <span className="font-display text-[1.75rem] font-semibold tracking-[-0.03em] text-ink">{v.name}</span>
                   <span className="ml-auto flex flex-wrap gap-1.5">
                     {v.tags.map((t) => (
-                      <span key={t} className="rounded-full bg-mist px-2.5 py-1 text-[0.75rem] font-medium text-royal">
+                      <span key={t} className="rounded-full bg-tint px-2.5 py-1 text-[0.75rem] font-medium text-brand">
                         {t}
                       </span>
                     ))}
