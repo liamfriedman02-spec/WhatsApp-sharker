@@ -66,7 +66,7 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 lg:ml-0">
-          <ButtonLink href={DEMO_URL} size="sm" variant={solid ? 'primary' : 'gold'} className="hidden sm:inline-flex">
+          <ButtonLink href={DEMO_URL} size="sm" variant={solid ? 'primary' : 'white'} className="hidden sm:inline-flex">
             Book a Demo
           </ButtonLink>
           <button

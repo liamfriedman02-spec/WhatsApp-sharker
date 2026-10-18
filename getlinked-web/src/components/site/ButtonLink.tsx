@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-/** primary and outline sit on light backgrounds; gold, white and outlineLight sit on the dark brand surfaces. */
-type Variant = 'primary' | 'outline' | 'gold' | 'white' | 'outlineLight';
+/** primary and outline sit on light backgrounds; white and outlineLight sit on the emerald brand surfaces. */
+type Variant = 'primary' | 'outline' | 'white' | 'outlineLight';
 type Size = 'sm' | 'md' | 'lg' | 'hero';
 
 const base =
@@ -10,7 +10,6 @@ const base =
 const variants: Record<Variant, string> = {
   primary: 'bg-brand text-white shadow-[0_10px_28px_-12px_rgb(11_90_66/0.7)] hover:bg-accent',
   outline: 'bg-white text-ink ring-1 ring-inset ring-line hover:ring-[#b3c4bb]',
-  gold: 'btn-gold',
   white: 'bg-white text-brand shadow-[0_12px_30px_-12px_rgb(2_20_14/0.55)] hover:bg-[#eef6f1]',
   outlineLight: 'text-white ring-[1.5px] ring-inset ring-white/50 hover:bg-white/10 hover:ring-white/80',
 };

@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* GetLinked design tokens: a fresh, light emerald with a champagne-gold accent; pages carry a faint mint tint. */
+/* GetLinked design tokens: a fresh, light emerald; pages carry a faint mint tint. */
 @theme {
   --color-paper: #f2f8f4;
   --color-tint: #def1e6;
@@ -12,8 +12,6 @@
   --color-brand: #0b6448;
   --color-accent: #0e7d5a;
   --color-pale: #d4f1e2;
-  --color-gold: #d9bb7c;
-  --color-gold-hi: #f4e4b8;
   --color-money: #12935f;
   --color-amber: #c77a07;
   --color-violet: #6a4ddb;
@@ -77,18 +75,18 @@
 
 /* ---------- Brand surfaces ---------- */
 
-/* Light emerald with a soft gold light: the hero, the solutions band and the closing call to action. */
+/* Light emerald: the hero, the solutions band and the closing call to action. */
 .brand-surface {
   background:
     radial-gradient(55% 50% at 50% 0%, rgb(140 236 190 / 0.3), transparent 70%),
-    radial-gradient(35% 40% at 88% 70%, rgb(244 228 184 / 0.22), transparent 70%),
+    radial-gradient(35% 40% at 88% 70%, rgb(190 255 225 / 0.16), transparent 70%),
     radial-gradient(40% 45% at 8% 85%, rgb(36 170 120 / 0.35), transparent 70%),
     linear-gradient(165deg, #0a5c44 0%, #0f7a59 45%, #16936b 100%);
 }
 
 /* A slow drifting light over the dark surfaces. */
 .brand-glow {
-  background: radial-gradient(40% 50% at 50% 50%, rgb(244 228 184 / 0.2), transparent 70%);
+  background: radial-gradient(40% 50% at 50% 50%, rgb(210 255 234 / 0.16), transparent 70%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -106,21 +104,9 @@
   }
 }
 
-/* Champagne gold, for the main call to action on dark surfaces. */
-.btn-gold {
-  background: linear-gradient(180deg, #fbf0d2, var(--color-gold));
-  color: #2a2008;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.6),
-    0 12px 30px -12px rgb(60 40 0 / 0.45);
-}
-
-.btn-gold:hover {
-  background: linear-gradient(180deg, #fff6de, #e3c78c);
-}
-
-.text-gold-fill {
-  background: linear-gradient(180deg, #fff4d8, var(--color-gold-hi));
+/* A light mint fill for accent words on the emerald surfaces. */
+.text-mint-fill {
+  background: linear-gradient(180deg, #f2fff8 20%, #aeedcd 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

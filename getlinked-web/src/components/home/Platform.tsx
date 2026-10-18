@@ -147,7 +147,7 @@ export function Platform() {
             {FEATURES.map((f) => (
               <li key={f.title} id={f.id} className="group scroll-mt-28 bg-white transition-colors duration-300 hover:bg-paper">
                 <div data-reveal className="flex gap-4 px-5 py-5 sm:block sm:p-7">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-tint text-accent transition-[background-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:bg-brand group-hover:text-gold-hi">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-tint text-accent transition-[background-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:bg-brand group-hover:text-white">
                     {f.icon}
                   </span>
                   <span className="block min-w-0">

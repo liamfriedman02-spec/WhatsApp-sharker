@@ -15,7 +15,7 @@ export function FinalCta() {
               See tracking, lead distribution, Lead Recycling and reporting set up around the way your network works today.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <ButtonLink href={DEMO_URL} variant="gold" size="hero">
+              <ButtonLink href={DEMO_URL} variant="white" size="hero">
                 Book a Demo
               </ButtonLink>
               <ButtonLink href="#platform" variant="outlineLight" size="hero">

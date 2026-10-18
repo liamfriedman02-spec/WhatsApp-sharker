@@ -17,7 +17,7 @@ const VERTICALS = [
     body: 'Track players from the first click to their first deposit, pay every affiliate on the deal you agreed, and see which partners and countries actually make you money.',
     tags: ['Casino', 'Sportsbook'],
     points: ['CPA, RevShare and hybrid deals', 'FTD tracking by postback', 'Affiliate and sub ID reports', 'Profit per affiliate and country'],
-    glow: 'rgb(201 168 101 / 0.2)',
+    glow: 'rgb(36 170 120 / 0.14)',
   },
 ];
 

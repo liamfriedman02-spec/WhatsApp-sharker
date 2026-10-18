@@ -8,7 +8,7 @@ const C = {
   tint: '#def1e6',
   line: '#d0e3d8',
   money: '#12935f',
-  gold: '#d2ae62',
+  coral: '#e07a5f',
   violet: '#6a4ddb',
   amber: '#c77a07',
   slate: '#98a2b3',
@@ -113,7 +113,7 @@ function PartnersArt() {
     { x: 64, y: 118, bg: C.violet },
   ];
   const right = [
-    { x: 256, y: 50, bg: C.gold },
+    { x: 256, y: 50, bg: C.coral },
     { x: 256, y: 118, bg: '#2f6fb0' },
   ];
   return (
@@ -129,7 +129,7 @@ function PartnersArt() {
       ))}
       <path d="M160 84 L160 26" stroke={C.pale} strokeWidth="2" />
       {[...left, ...right].map((p, i) => (
-        <Traveller key={`t${p.x}-${p.y}`} path={i % 2 ? `M160 84 L${p.x} ${p.y}` : `M${p.x} ${p.y} L160 84`} dur="2.2s" begin={`${i * 0.55}s`} r={2.8} color={i < 2 ? C.accent : C.gold} />
+        <Traveller key={`t${p.x}-${p.y}`} path={i % 2 ? `M160 84 L${p.x} ${p.y}` : `M${p.x} ${p.y} L160 84`} dur="2.2s" begin={`${i * 0.55}s`} r={2.8} color={C.accent} />
       ))}
       <rect x={124} y={50} width={72} height={68} rx={20} fill="none" stroke={C.accent} strokeWidth="1.5" className="svg-motion">
         <animate attributeName="opacity" values="0.6;0;0.6" dur="2.8s" repeatCount="indefinite" />
@@ -306,7 +306,7 @@ export function Pillars() {
 
       <div className="container-page relative">
         <div className="max-w-[46rem]">
-          <p className="text-[0.9375rem] font-semibold text-gold-hi">Solutions</p>
+          <p className="text-[0.9375rem] font-semibold text-pale">Solutions</p>
           <h2 className="headline-fill mt-3 font-display text-[clamp(2rem,4.2vw,3.25rem)] font-semibold leading-[1.04] tracking-[-0.035em] [text-wrap:balance]">
             One platform. Three ways to grow.
           </h2>

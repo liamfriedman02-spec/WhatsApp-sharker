@@ -62,7 +62,7 @@ export function Hero() {
         <h1 className="mx-auto max-w-[24ch] font-display text-[clamp(2.25rem,5.4vw,4.5rem)] font-semibold leading-[1.03] tracking-[-0.038em] [text-wrap:balance]">
           {['Your Entire Affiliate Traffic.', 'One Powerful Platform.'].map((line) => (
             <span key={line} className="block overflow-hidden pb-[0.08em]">
-              <span data-line className={`block ${line.startsWith('One') ? 'text-gold-fill' : 'headline-fill'}`}>
+              <span data-line className={`block ${line.startsWith('One') ? 'text-mint-fill' : 'headline-fill'}`}>
                 {line}
               </span>
             </span>
@@ -77,7 +77,7 @@ export function Hero() {
           management, and real-time tracking in one powerful platform designed to maximize performance and accelerate growth.
         </p>
         <div data-intro className="mt-7 flex flex-wrap justify-center gap-3 sm:mt-8">
-          <ButtonLink href={DEMO_URL} variant="gold" size="hero">
+          <ButtonLink href={DEMO_URL} variant="white" size="hero">
             Book a Demo
           </ButtonLink>
           <ButtonLink href="#platform" variant="outlineLight" size="hero">
@@ -107,7 +107,7 @@ export function Hero() {
         <ul className="mt-10 flex flex-wrap justify-center gap-x-7 gap-y-2.5 text-[0.9375rem] font-medium text-muted">
           {HIGHLIGHTS.map((h) => (
             <li key={h} className="flex items-center gap-2">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gold" />
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent" />
               {h}
             </li>
           ))}

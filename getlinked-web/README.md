@@ -55,7 +55,7 @@ npm run export:preview   # writes ./out
 
 ## Behaviour
 
-- **Colours:** light emerald with champagne gold for the hero, the solutions band and the closing CTA; light mint-tinted pages elsewhere. Tokens are in `globals.css`. The previous blue design is commit `c2552ee`.
+- **Colours:** light emerald for the hero, the solutions band and the closing CTA; light mint-tinted pages elsewhere. Tokens are in `globals.css`. The previous blue design is commit `c2552ee`.
 - **Motion:** the hero headline slides in and the dashboard settles flat as you scroll. Sections rise into view, the 300+ and 200+ numbers count up, the solution illustrations move, and the bot's chat messages arrive one by one. All motion lives in `src/components/site/Motion.tsx` and the hero.
 - **Phones:** the dashboard bleeds off the right edge so it stays readable.
 - **Reduced motion:** nothing moves; everything is shown in its final state.
